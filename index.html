@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accurate Internet Speed Test</title>
+    <title>Advanced Internet Speed Test</title>
     <style>
         * {
             margin: 0;
@@ -25,7 +25,7 @@
             background: white;
             border-radius: 20px;
             padding: 40px;
-            max-width: 650px;
+            max-width: 700px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
@@ -33,7 +33,7 @@
         h1 {
             text-align: center;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             font-size: 2em;
         }
 
@@ -44,11 +44,12 @@
             font-size: 0.9em;
         }
 
+        /* Main Speed Display */
         .speed-display {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
 
         .speed-item {
@@ -57,6 +58,7 @@
             background: #f8f9fa;
             border-radius: 10px;
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .speed-item.active {
@@ -91,6 +93,39 @@
             color: #999;
         }
 
+        /* Advanced Metrics */
+        .advanced-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .metric-item {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .metric-label {
+            font-size: 0.7em;
+            color: #888;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value.good { color: #10b981; }
+        .metric-value.medium { color: #f59e0b; }
+        .metric-value.poor { color: #ef4444; }
+
         .progress-container {
             width: 100%;
             height: 10px;
@@ -113,6 +148,49 @@
             margin: 15px 0;
             font-size: 0.85em;
             color: #888;
+        }
+
+        /* Live Latency Display */
+        .live-latency {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            background: #f0f2ff;
+            border-radius: 8px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .latency-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .latency-dot.good { background: #10b981; }
+        .latency-dot.medium { background: #f59e0b; }
+        .latency-dot.poor { background: #ef4444; }
+        .latency-dot.measuring { animation: blink 0.5s ease-in-out infinite; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+
+        .live-label {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .live-value {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
         }
 
         button {
@@ -159,6 +237,10 @@
             color: #10b981;
         }
 
+        .status.warning {
+            color: #f59e0b;
+        }
+
         .info {
             margin-top: 20px;
             padding-top: 20px;
@@ -186,6 +268,70 @@
             font-weight: 600;
         }
 
+        /* History Section */
+        .history-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .history-title {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-list {
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.8em;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 4px;
+            color: #666;
+        }
+
+        .history-item .time {
+            color: #999;
+        }
+
+        .history-item .scores {
+            display: flex;
+            gap: 15px;
+        }
+
+        .history-item .scores span {
+            font-weight: 500;
+        }
+
+        .clear-history {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 0.8em;
+            padding: 0;
+            width: auto;
+            margin: 0;
+            background: none;
+            color: #999;
+        }
+
+        .clear-history:hover {
+            color: #ef4444;
+            transform: none;
+            box-shadow: none;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 20px;
@@ -196,6 +342,11 @@
                 gap: 10px;
             }
             
+            .advanced-metrics {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+
             .speed-value {
                 font-size: 1.8em;
             }
@@ -205,31 +356,35 @@
                 gap: 5px;
                 align-items: center;
             }
+
+            .live-latency {
+                flex-direction: column;
+                gap: 8px;
+            }
         }
 
-        /* Loading spinner */
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 3px solid rgba(102, 126, 234, 0.2);
-            border-radius: 50%;
-            border-top-color: #667eea;
-            animation: spin 0.8s ease-in-out infinite;
-            margin-right: 8px;
-            vertical-align: middle;
+        /* Scrollbar styling */
+        .history-list::-webkit-scrollbar {
+            width: 4px;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .history-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .history-list::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🌐 Speed Test</h1>
-        <p class="subtitle">Accurate internet speed measurement</p>
+        <p class="subtitle">Real-time internet performance analysis</p>
         
+        <!-- Main Speed Display -->
         <div class="speed-display">
             <div class="speed-item" id="downloadItem">
                 <div class="speed-value" id="downloadSpeed">--</div>
@@ -245,6 +400,39 @@
             </div>
         </div>
 
+        <!-- Live Latency Display -->
+        <div class="live-latency" id="liveLatency">
+            <span class="live-label">📡 Live Latency:</span>
+            <span class="latency-dot" id="latencyDot"></span>
+            <span class="live-value" id="liveLatencyValue">-- ms</span>
+            <span class="live-label" style="margin-left: 10px;">|</span>
+            <span class="live-label">Jitter:</span>
+            <span class="live-value" id="jitterValue">-- ms</span>
+            <span class="live-label" style="margin-left: 10px;">|</span>
+            <span class="live-label">Packet Loss:</span>
+            <span class="live-value" id="packetLossValue">--%</span>
+        </div>
+
+        <!-- Advanced Metrics -->
+        <div class="advanced-metrics">
+            <div class="metric-item">
+                <div class="metric-value" id="minLatency">--</div>
+                <div class="metric-label">Min Latency</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" id="maxLatency">--</div>
+                <div class="metric-label">Max Latency</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" id="avgLatency">--</div>
+                <div class="metric-label">Avg Latency</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" id="jitterMetric">--</div>
+                <div class="metric-label">Jitter</div>
+            </div>
+        </div>
+
         <div class="progress-container">
             <div class="progress-bar" id="progressBar"></div>
         </div>
@@ -257,6 +445,15 @@
         <button id="startTest" onclick="startSpeedTest()">Start Test</button>
         
         <div class="status" id="status">Click "Start Test" to begin</div>
+
+        <!-- History Section -->
+        <div class="history-section" id="historySection" style="display:none;">
+            <div class="history-title">
+                <span>📊 Test History</span>
+                <button class="clear-history" onclick="clearHistory()">Clear All</button>
+            </div>
+            <div class="history-list" id="historyList"></div>
+        </div>
         
         <div class="info">
             <span class="info-item">
@@ -265,7 +462,7 @@
             </span>
             <span class="info-item">
                 <span class="label">Test Data:</span>
-                <span class="value" id="dataInfo">50 MB</span>
+                <span class="value" id="dataInfo">25 MB</span>
             </span>
             <span class="info-item">
                 <span class="label">ISP:</span>
@@ -277,9 +474,13 @@
     <script>
         let isTesting = false;
         let testAbortController = null;
+        let latencyHistory = [];
+        let testResultsHistory = [];
+        let liveLatencyInterval = null;
+        
         const TEST_FILES = [
-            { url: 'https://speed.cloudflare.com/__down?bytes=25000000', size: 25 }, // 25MB
-            { url: 'https://speed.cloudflare.com/__down?bytes=25000000', size: 25 }, // 25MB
+            { url: 'https://speed.cloudflare.com/__down?bytes=25000000', size: 25 },
+            { url: 'https://speed.cloudflare.com/__down?bytes=25000000', size: 25 },
         ];
         const UPLOAD_URL = 'https://speed.cloudflare.com/__up';
 
@@ -303,7 +504,100 @@
             }
         }
 
-        // Measure download speed using real files
+        // Update live latency display
+        function updateLiveLatency(latency) {
+            const dot = document.getElementById('latencyDot');
+            const valueEl = document.getElementById('liveLatencyValue');
+            
+            valueEl.textContent = latency.toFixed(1) + ' ms';
+            
+            // Update dot color
+            dot.className = 'latency-dot';
+            if (latency < 50) dot.classList.add('good');
+            else if (latency < 100) dot.classList.add('medium');
+            else dot.classList.add('poor');
+            
+            // Add to history
+            latencyHistory.push(latency);
+            if (latencyHistory.length > 50) latencyHistory.shift();
+            
+            // Update jitter
+            if (latencyHistory.length > 1) {
+                const jitter = calculateJitter(latencyHistory);
+                document.getElementById('jitterValue').textContent = jitter.toFixed(1) + ' ms';
+                document.getElementById('jitterMetric').textContent = jitter.toFixed(1) + ' ms';
+            }
+            
+            // Update min/max/avg
+            if (latencyHistory.length > 0) {
+                const min = Math.min(...latencyHistory);
+                const max = Math.max(...latencyHistory);
+                const avg = latencyHistory.reduce((a, b) => a + b, 0) / latencyHistory.length;
+                
+                document.getElementById('minLatency').textContent = min.toFixed(1) + ' ms';
+                document.getElementById('maxLatency').textContent = max.toFixed(1) + ' ms';
+                document.getElementById('avgLatency').textContent = avg.toFixed(1) + ' ms';
+            }
+        }
+
+        // Calculate jitter (mean deviation)
+        function calculateJitter(values) {
+            if (values.length < 2) return 0;
+            const mean = values.reduce((a, b) => a + b, 0) / values.length;
+            const deviations = values.map(v => Math.abs(v - mean));
+            return deviations.reduce((a, b) => a + b, 0) / deviations.length;
+        }
+
+        // Start live latency monitoring
+        async function startLiveLatency() {
+            let packetLoss = 0;
+            let totalAttempts = 0;
+            
+            liveLatencyInterval = setInterval(async () => {
+                if (!isTesting) return;
+                
+                try {
+                    const startTime = performance.now();
+                    await fetch('https://speed.cloudflare.com/__down?bytes=0&cache=' + Date.now(), {
+                        method: 'GET',
+                        cache: 'no-store',
+                        signal: testAbortController?.signal
+                    });
+                    const endTime = performance.now();
+                    const latency = endTime - startTime;
+                    
+                    updateLiveLatency(latency);
+                    totalAttempts++;
+                    
+                } catch (error) {
+                    if (error.name === 'AbortError') return;
+                    packetLoss++;
+                    totalAttempts++;
+                    
+                    // Update packet loss
+                    const lossPercentage = (packetLoss / totalAttempts) * 100;
+                    document.getElementById('packetLossValue').textContent = lossPercentage.toFixed(1) + '%';
+                    
+                    // Color code packet loss
+                    const lossEl = document.getElementById('packetLossValue');
+                    if (lossPercentage < 1) lossEl.style.color = '#10b981';
+                    else if (lossPercentage < 5) lossEl.style.color = '#f59e0b';
+                    else lossEl.style.color = '#ef4444';
+                }
+            }, 500); // Check every 500ms
+        }
+
+        // Stop live latency monitoring
+        function stopLiveLatency() {
+            if (liveLatencyInterval) {
+                clearInterval(liveLatencyInterval);
+                liveLatencyInterval = null;
+            }
+            document.getElementById('latencyDot').className = 'latency-dot';
+            document.getElementById('liveLatencyValue').textContent = '-- ms';
+        }
+
+        // Measure download speed
         async function measureDownload() {
             let totalBytes = 0;
             let totalTime = 0;
@@ -330,15 +624,13 @@
                         if (done) break;
                         receivedBytes += value.length;
                         
-                        // Calculate current speed
                         const elapsed = (performance.now() - startTime) / 1000;
                         if (elapsed > 0.5) {
                             const currentSpeed = (receivedBytes * 8) / (elapsed * 1000000);
                             measurements.push(currentSpeed);
                         }
                         
-                        // Update progress
-                        const totalProgress = ((i / TEST_FILES.length) + (receivedBytes / contentLength / TEST_FILES.length)) * 100;
+                        const totalProgress = ((i / TEST_FILES.length) + (receivedBytes / contentLength / TEST_FILES.length)) * 50;
                         updateProgress('Downloading', totalProgress, `Downloading... ${Math.round(receivedBytes / 1024 / 1024)}MB`);
                     }
 
@@ -357,7 +649,6 @@
                 }
             }
 
-            // Calculate average speed (remove outliers)
             if (measurements.length === 0) return 0;
             measurements.sort((a, b) => a - b);
             const trimmed = measurements.slice(
@@ -371,8 +662,8 @@
 
         // Measure upload speed
         async function measureUpload() {
-            const chunkSize = 1024 * 1024; // 1MB chunks
-            const totalSize = 10 * 1024 * 1024; // 10MB total
+            const chunkSize = 1024 * 1024;
+            const totalSize = 10 * 1024 * 1024;
             let uploadedBytes = 0;
             let startTime = performance.now();
             let measurements = [];
@@ -381,7 +672,6 @@
                 const currentChunkSize = Math.min(chunkSize, totalSize - uploadedBytes);
                 const chunk = new Uint8Array(currentChunkSize);
                 
-                // Fill with random data
                 for (let i = 0; i < currentChunkSize; i += 65536) {
                     const end = Math.min(i + 65536, currentChunkSize);
                     const randomValues = crypto.getRandomValues(new Uint8Array(end - i));
@@ -410,34 +700,31 @@
 
                     uploadedBytes += currentChunkSize;
                     
-                    const totalProgress = 50 + (uploadedBytes / totalSize) * 50;
+                    const totalProgress = 50 + (uploadedBytes / totalSize) * 45;
                     updateProgress('Uploading', totalProgress, `Uploading... ${Math.round(uploadedBytes / 1024 / 1024)}MB`);
 
                 } catch (error) {
                     if (error.name === 'AbortError') throw error;
                     console.error('Upload chunk failed:', error);
-                    // Continue with next chunk
                 }
             }
 
             const totalDuration = (performance.now() - startTime) / 1000;
             const avgSpeed = (totalSize * 8) / (totalDuration * 1000000);
 
-            // Use median of measurements or average
             if (measurements.length > 0) {
                 measurements.sort((a, b) => a - b);
                 const median = measurements[Math.floor(measurements.length / 2)];
-                // Return the more conservative estimate
                 return Math.min(avgSpeed, median * 1.2);
             }
             
             return avgSpeed;
         }
 
-        // Measure ping accurately
+        // Measure ping with detailed stats
         async function measurePing() {
             const pingTimes = [];
-            const attempts = 5;
+            const attempts = 10;
             const pingUrl = 'https://speed.cloudflare.com/__down?bytes=0';
             
             for (let i = 0; i < attempts; i++) {
@@ -449,24 +736,41 @@
                         signal: testAbortController?.signal
                     });
                     const endTime = performance.now();
-                    pingTimes.push(endTime - startTime);
+                    const pingTime = endTime - startTime;
+                    pingTimes.push(pingTime);
+                    
+                    // Update live latency during ping test
+                    updateLiveLatency(pingTime);
+                    
                 } catch (error) {
                     if (error.name === 'AbortError') throw error;
                     console.warn('Ping attempt failed:', error);
                 }
                 
-                // Small delay between pings
                 if (i < attempts - 1) {
                     await new Promise(resolve => setTimeout(resolve, 200));
                 }
+                
+                // Update progress
+                updateProgress('Ping Test', 5 + (i / attempts) * 5, `Pinging... ${i + 1}/${attempts}`);
             }
 
-            if (pingTimes.length === 0) return 0;
+            if (pingTimes.length === 0) return { median: 0, min: 0, max: 0, avg: 0, jitter: 0 };
             
-            // Sort and take median
             pingTimes.sort((a, b) => a - b);
             const median = pingTimes[Math.floor(pingTimes.length / 2)];
-            return Math.round(median * 10) / 10;
+            const min = pingTimes[0];
+            const max = pingTimes[pingTimes.length - 1];
+            const avg = pingTimes.reduce((a, b) => a + b, 0) / pingTimes.length;
+            const jitter = calculateJitter(pingTimes);
+            
+            // Update advanced metrics
+            document.getElementById('minLatency').textContent = min.toFixed(1) + ' ms';
+            document.getElementById('maxLatency').textContent = max.toFixed(1) + ' ms';
+            document.getElementById('avgLatency').textContent = avg.toFixed(1) + ' ms';
+            document.getElementById('jitterMetric').textContent = jitter.toFixed(1) + ' ms';
+            
+            return { median, min, max, avg, jitter };
         }
 
         // Detect ISP
@@ -480,6 +784,49 @@
             } catch (error) {
                 return '--';
             }
+        }
+
+        // Save test result to history
+        function saveToHistory(download, upload, ping, jitter) {
+            const timestamp = new Date().toLocaleTimeString();
+            testResultsHistory.push({
+                time: timestamp,
+                download: download,
+                upload: upload,
+                ping: ping,
+                jitter: jitter
+            });
+            
+            // Keep only last 20 results
+            if (testResultsHistory.length > 20) {
+                testResultsHistory.shift();
+            }
+            
+            renderHistory();
+            document.getElementById('historySection').style.display = 'block';
+        }
+
+        // Render history
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = testResultsHistory.slice().reverse().map(result => `
+                <div class="history-item">
+                    <span class="time">${result.time}</span>
+                    <div class="scores">
+                        <span style="color: #667eea;">↓${result.download.toFixed(1)}</span>
+                        <span style="color: #764ba2;">↑${result.upload.toFixed(1)}</span>
+                        <span style="color: #10b981;">⚡${result.ping.toFixed(1)}ms</span>
+                        <span style="color: #f59e0b;">📊${result.jitter.toFixed(1)}ms</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Clear history
+        function clearHistory() {
+            testResultsHistory = [];
+            document.getElementById('historySection').style.display = 'none';
+            document.getElementById('historyList').innerHTML = '';
         }
 
         // Main speed test function
@@ -497,14 +844,17 @@
             document.getElementById('progressBar').style.width = '0%';
             document.getElementById('testPhase').textContent = 'Starting...';
             document.getElementById('testProgress').textContent = '0%';
+            document.getElementById('liveLatencyValue').textContent = '-- ms';
+            document.getElementById('jitterValue').textContent = '-- ms';
+            document.getElementById('packetLossValue').textContent = '--%';
             
-            // Remove old status classes
+            // Reset latency history
+            latencyHistory = [];
+            
             statusEl.className = 'status';
-            
             button.disabled = true;
             button.textContent = 'Testing...';
             
-            // Create abort controller for canceling requests
             testAbortController = new AbortController();
 
             try {
@@ -513,12 +863,15 @@
                 const isp = await detectISP();
                 document.getElementById('ispInfo').textContent = isp;
 
-                // Measure Ping
+                // Start live latency monitoring
+                startLiveLatency();
+
+                // Measure Ping with detailed stats
                 statusEl.textContent = 'Measuring ping...';
-                updateProgress('Ping Test', 10);
+                updateProgress('Ping Test', 5);
                 setLoading('ping', true);
-                const pingResult = await measurePing();
-                document.getElementById('ping').textContent = pingResult.toFixed(1);
+                const pingStats = await measurePing();
+                document.getElementById('ping').textContent = pingStats.median.toFixed(1);
                 setLoading('ping', false);
 
                 // Measure Download
@@ -546,8 +899,14 @@
                 statusEl.textContent = '✅ Test complete!';
                 statusEl.className = 'status success';
                 
-                // Update colors based on results
-                updateSpeedColors(downloadResult, uploadResult, pingResult);
+                // Update colors
+                updateSpeedColors(downloadResult, uploadResult, pingStats.median);
+                
+                // Save to history
+                saveToHistory(downloadResult, uploadResult, pingStats.median, pingStats.jitter);
+                
+                // Stop live latency
+                stopLiveLatency();
                 
             } catch (error) {
                 if (error.name === 'AbortError') {
@@ -558,13 +917,13 @@
                     statusEl.className = 'status error';
                 }
                 console.error('Speed test error:', error);
+                stopLiveLatency();
             } finally {
                 button.disabled = false;
                 button.textContent = 'Test Again';
                 isTesting = false;
                 testAbortController = null;
                 
-                // Clear active states
                 document.getElementById('downloadItem').classList.remove('active');
                 document.getElementById('uploadItem').classList.remove('active');
                 setLoading('downloadSpeed', false);
@@ -579,38 +938,20 @@
             const uploadEl = document.getElementById('uploadSpeed');
             const pingEl = document.getElementById('ping');
             
-            // Download color
-            if (download > 100) {
-                downloadEl.style.color = '#10b981';
-            } else if (download > 50) {
-                downloadEl.style.color = '#f59e0b';
-            } else if (download > 20) {
-                downloadEl.style.color = '#f97316';
-            } else {
-                downloadEl.style.color = '#ef4444';
-            }
+            if (download > 100) downloadEl.style.color = '#10b981';
+            else if (download > 50) downloadEl.style.color = '#f59e0b';
+            else if (download > 20) downloadEl.style.color = '#f97316';
+            else downloadEl.style.color = '#ef4444';
             
-            // Upload color
-            if (upload > 50) {
-                uploadEl.style.color = '#10b981';
-            } else if (upload > 20) {
-                uploadEl.style.color = '#f59e0b';
-            } else if (upload > 5) {
-                uploadEl.style.color = '#f97316';
-            } else {
-                uploadEl.style.color = '#ef4444';
-            }
+            if (upload > 50) uploadEl.style.color = '#10b981';
+            else if (upload > 20) uploadEl.style.color = '#f59e0b';
+            else if (upload > 5) uploadEl.style.color = '#f97316';
+            else uploadEl.style.color = '#ef4444';
             
-            // Ping color
-            if (ping < 20) {
-                pingEl.style.color = '#10b981';
-            } else if (ping < 50) {
-                pingEl.style.color = '#f59e0b';
-            } else if (ping < 100) {
-                pingEl.style.color = '#f97316';
-            } else {
-                pingEl.style.color = '#ef4444';
-            }
+            if (ping < 20) pingEl.style.color = '#10b981';
+            else if (ping < 50) pingEl.style.color = '#f59e0b';
+            else if (ping < 100) pingEl.style.color = '#f97316';
+            else pingEl.style.color = '#ef4444';
         }
 
         // Cancel test if user navigates away
@@ -622,11 +963,11 @@
             }
         });
 
-        // Initialize on page load
+        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            // Update server info
             document.getElementById('serverInfo').textContent = 'Cloudflare';
             document.getElementById('dataInfo').textContent = '25 MB';
+            document.getElementById('latencyDot').className = 'latency-dot';
         });
     </script>
 </body>
