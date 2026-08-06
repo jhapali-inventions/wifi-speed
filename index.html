@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Universal Speed Test</title>
     <style>
+        /* (styles unchanged – same as previous) */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -20,7 +20,6 @@
             align-items: center;
             padding: 20px;
         }
-
         .container {
             background: white;
             border-radius: 20px;
@@ -29,28 +28,24 @@
             width: 100%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
-
         h1 {
             text-align: center;
             color: #333;
             margin-bottom: 5px;
             font-size: 2em;
         }
-
         .subtitle {
             text-align: center;
             color: #888;
             margin-bottom: 30px;
             font-size: 0.9em;
         }
-
         .speed-display {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
             margin-bottom: 25px;
         }
-
         .speed-item {
             text-align: center;
             padding: 15px;
@@ -59,39 +54,32 @@
             transition: all 0.3s ease;
             position: relative;
         }
-
         .speed-item.active {
             background: #e8ecff;
             box-shadow: 0 0 20px rgba(102, 126, 234, 0.1);
         }
-
         .speed-value {
             font-size: 2.2em;
             font-weight: bold;
             color: #667eea;
             transition: all 0.3s ease;
         }
-
         .speed-value.measuring {
             animation: pulse 0.8s ease-in-out infinite;
         }
-
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-
         .speed-label {
             font-size: 0.85em;
             color: #666;
             margin-top: 5px;
         }
-
         .speed-unit {
             font-size: 0.5em;
             color: #999;
         }
-
         .advanced-metrics {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -101,17 +89,14 @@
             background: #f8f9fa;
             border-radius: 10px;
         }
-
         .metric-item {
             text-align: center;
         }
-
         .metric-value {
             font-size: 1.1em;
             font-weight: bold;
             color: #333;
         }
-
         .metric-label {
             font-size: 0.7em;
             color: #888;
@@ -119,11 +104,9 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-
         .metric-value.good { color: #10b981; }
         .metric-value.medium { color: #f59e0b; }
         .metric-value.poor { color: #ef4444; }
-
         .progress-container {
             width: 100%;
             height: 10px;
@@ -132,14 +115,12 @@
             overflow: hidden;
             margin: 20px 0;
         }
-
         .progress-bar {
             height: 100%;
             width: 0%;
             background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
             transition: width 0.3s ease;
         }
-
         .test-details {
             display: flex;
             justify-content: space-between;
@@ -147,7 +128,6 @@
             font-size: 0.85em;
             color: #888;
         }
-
         .live-latency {
             display: flex;
             justify-content: center;
@@ -159,7 +139,6 @@
             margin: 15px 0;
             flex-wrap: wrap;
         }
-
         .latency-dot {
             display: inline-block;
             width: 12px;
@@ -168,28 +147,23 @@
             margin-right: 5px;
             transition: background-color 0.3s ease;
         }
-
         .latency-dot.good { background: #10b981; }
         .latency-dot.medium { background: #f59e0b; }
         .latency-dot.poor { background: #ef4444; }
         .latency-dot.measuring { animation: blink 0.5s ease-in-out infinite; }
-
         @keyframes blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.2; }
         }
-
         .live-label {
             font-size: 0.85em;
             color: #666;
         }
-
         .live-value {
             font-weight: bold;
             color: #667eea;
             font-size: 1.1em;
         }
-
         button {
             width: 100%;
             padding: 15px;
@@ -202,22 +176,16 @@
             transition: transform 0.2s, box-shadow 0.2s;
             margin-top: 10px;
         }
-
         button:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
         }
-
-        button:active {
-            transform: translateY(0);
-        }
-
+        button:active { transform: translateY(0); }
         button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
         }
-
         .status {
             text-align: center;
             margin-top: 15px;
@@ -225,19 +193,9 @@
             font-size: 0.95em;
             min-height: 24px;
         }
-
-        .status.error {
-            color: #ef4444;
-        }
-
-        .status.success {
-            color: #10b981;
-        }
-
-        .status.warning {
-            color: #f59e0b;
-        }
-
+        .status.error { color: #ef4444; }
+        .status.success { color: #10b981; }
+        .status.warning { color: #f59e0b; }
         .info {
             margin-top: 20px;
             padding-top: 20px;
@@ -249,28 +207,23 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-
         .info-item {
             display: flex;
             align-items: center;
             gap: 5px;
         }
-
         .info-item .label {
             color: #888;
         }
-
         .info-item .value {
             color: #667eea;
             font-weight: 600;
         }
-
         .history-section {
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid #e0e0e0;
         }
-
         .history-title {
             font-size: 0.9em;
             color: #666;
@@ -279,13 +232,11 @@
             justify-content: space-between;
             align-items: center;
         }
-
         .history-list {
             max-height: 150px;
             overflow-y: auto;
             font-size: 0.8em;
         }
-
         .history-item {
             display: flex;
             justify-content: space-between;
@@ -295,20 +246,12 @@
             margin-bottom: 4px;
             color: #666;
         }
-
-        .history-item .time {
-            color: #999;
-        }
-
+        .history-item .time { color: #999; }
         .history-item .scores {
             display: flex;
             gap: 15px;
         }
-
-        .history-item .scores span {
-            font-weight: 500;
-        }
-
+        .history-item .scores span { font-weight: 500; }
         .clear-history {
             background: none;
             border: none;
@@ -321,13 +264,11 @@
             background: none;
             color: #999;
         }
-
         .clear-history:hover {
             color: #ef4444;
             transform: none;
             box-shadow: none;
         }
-
         @media (max-width: 600px) {
             .container { padding: 20px; }
             .speed-display { grid-template-columns: 1fr; gap: 10px; }
@@ -336,25 +277,16 @@
             .test-details { flex-direction: column; gap: 5px; align-items: center; }
             .live-latency { flex-direction: column; gap: 8px; }
         }
-
-        .history-list::-webkit-scrollbar {
-            width: 4px;
-        }
-        .history-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        .history-list::-webkit-scrollbar-thumb {
-            background: #667eea;
-            border-radius: 10px;
-        }
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .history-list::-webkit-scrollbar-thumb { background: #667eea; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🌐 Speed Test</h1>
         <p class="subtitle">Free &amp; accurate — powered by public CDNs</p>
-        
+
         <div class="speed-display">
             <div class="speed-item" id="downloadItem">
                 <div class="speed-value" id="downloadSpeed">--</div>
@@ -411,7 +343,7 @@
         </div>
 
         <button id="startTest" onclick="startSpeedTest()">Start Test</button>
-        
+
         <div class="status" id="status">Click "Start Test" to begin</div>
 
         <div class="history-section" id="historySection" style="display:none;">
@@ -421,7 +353,7 @@
             </div>
             <div class="history-list" id="historyList"></div>
         </div>
-        
+
         <div class="info">
             <span class="info-item">
                 <span class="label">Test Server:</span>
@@ -440,23 +372,22 @@
 
     <script>
         // -------------------------------------------------------------
-        // CONFIGURATION – uses only free, public resources
+        // CONFIGURATION – using free, public resources
         // -------------------------------------------------------------
         const DOWNLOAD_SOURCES = [
-            // Large files from various CDNs (all CORS-enabled)
-            { url: 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js', size: 87000 },      // ~87KB
-            { url: 'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js', size: 72000 },        // ~72KB
-            { url: 'https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js', size: 55000 },       // ~55KB
-            // Larger files for better accuracy (images from CDN)
-            { url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_regular.typeface.json', size: 450000 }, // ~450KB
-            { url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/models/obj/male02.obj', size: 300000 }, // ~300KB
+            { url: 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js', size: 87000 },
+            { url: 'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js', size: 72000 },
+            { url: 'https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js', size: 55000 },
+            { url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_regular.typeface.json', size: 450000 },
+            { url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/models/obj/male02.obj', size: 300000 },
         ];
 
-        // For upload, we use httpbin.org (free, CORS-enabled, up to 10MB)
-        const UPLOAD_URL = 'https://httpbin.org/post';
-        const UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB to stay within limits
+        // UPLOAD – use postman-echo (more reliable, CORS, no size limit issues)
+        const UPLOAD_URL = 'https://postman-echo.com/post';
+        const UPLOAD_SIZE = 3 * 1024 * 1024; // 3 MB – safe and quick
+        const CHUNK_SIZE = 512 * 1024;       // 512 KB per chunk
 
-        // Ping endpoints – various CDNs to get median
+        // PING endpoints
         const PING_ENDPOINTS = [
             'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js',
@@ -473,7 +404,7 @@
         let liveLatencyInterval = null;
 
         // -------------------------------------------------------------
-        // UTILITY FUNCTIONS
+        // UTILITY
         // -------------------------------------------------------------
         function setLoading(elementId, isLoading) {
             const el = document.getElementById(elementId);
@@ -523,7 +454,7 @@
         }
 
         // -------------------------------------------------------------
-        // LIVE LATENCY MONITORING (using HEAD requests to CDNs)
+        // LIVE LATENCY MONITORING
         // -------------------------------------------------------------
         async function startLiveLatency() {
             let packetLoss = 0;
@@ -564,7 +495,7 @@
         }
 
         // -------------------------------------------------------------
-        // MEASURE PING (detailed)
+        // MEASURE PING
         // -------------------------------------------------------------
         async function measurePing() {
             const pingTimes = [];
@@ -577,7 +508,6 @@
                     pingTimes.push(performance.now() - start);
                 } catch (e) {
                     if (e.name === 'AbortError') throw e;
-                    // ignore failed ping
                 }
                 updateProgress('Ping Test', 5 + (i / attempts) * 5, `Pinging... ${i+1}/${attempts}`);
                 await new Promise(r => setTimeout(r, 150));
@@ -598,15 +528,11 @@
         }
 
         // -------------------------------------------------------------
-        // MEASURE DOWNLOAD (using multiple CDN files)
+        // MEASURE DOWNLOAD
         // -------------------------------------------------------------
         async function measureDownload() {
-            let totalBytes = 0;
-            let totalTime = 0;
             const measurements = [];
-
-            // Use up to 3 files to get a stable average
-            const filesToUse = DOWNLOAD_SOURCES.slice(0, 3);
+            const filesToUse = DOWNLOAD_SOURCES.slice(0, 4);
             for (let idx = 0; idx < filesToUse.length; idx++) {
                 const file = filesToUse[idx];
                 const start = performance.now();
@@ -618,22 +544,19 @@
                     if (!response.ok) throw new Error('HTTP ' + response.status);
                     const reader = response.body.getReader();
                     let received = 0;
-                    // We don't know exact Content-Length; we'll use the expected size from config
                     const expectedSize = file.size;
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
                         received += value.length;
                         const progress = (idx / filesToUse.length) + (received / expectedSize / filesToUse.length);
-                        updateProgress('Downloading', progress * 50, `Downloading... ${(received/1024).toFixed(0)}KB`);
+                        updateProgress('Downloading', progress * 45, `Downloading... ${(received/1024).toFixed(0)}KB`);
                     }
                     const duration = (performance.now() - start) / 1000;
                     if (duration > 0.1) {
                         const speed = (received * 8) / (duration * 1000000);
                         measurements.push(speed);
                     }
-                    totalBytes += received;
-                    totalTime += duration;
                 } catch (e) {
                     if (e.name === 'AbortError') throw e;
                     console.warn('Download source failed:', file.url, e);
@@ -650,11 +573,11 @@
         }
 
         // -------------------------------------------------------------
-        // MEASURE UPLOAD (using httpbin.org)
+        // MEASURE UPLOAD – fixed version with reliable endpoint & timeouts
         // -------------------------------------------------------------
         async function measureUpload() {
-            const chunkSize = 1024 * 1024; // 1MB
             const totalSize = UPLOAD_SIZE;
+            const chunkSize = CHUNK_SIZE;
             let uploaded = 0;
             const startTime = performance.now();
             const measurements = [];
@@ -662,23 +585,29 @@
             while (uploaded < totalSize) {
                 const current = Math.min(chunkSize, totalSize - uploaded);
                 const chunk = new Uint8Array(current);
-                // Fill with random bytes
+                // Fill with random data
                 for (let i = 0; i < current; i += 65536) {
                     const end = Math.min(i + 65536, current);
                     const rand = crypto.getRandomValues(new Uint8Array(end - i));
                     chunk.set(rand, i);
                 }
+
                 const chunkStart = performance.now();
+                // Create an AbortController per chunk with a 10s timeout
+                const chunkController = new AbortController();
+                const timeoutId = setTimeout(() => chunkController.abort(), 10000);
+
                 try {
                     const formData = new FormData();
                     formData.append('file', new Blob([chunk]), 'upload.bin');
                     const resp = await fetch(UPLOAD_URL, {
                         method: 'POST',
                         body: formData,
-                        signal: testAbortController?.signal
+                        signal: chunkController.signal
                     });
-                    if (!resp.ok) throw new Error('Upload failed');
-                    await resp.json(); // wait for body
+                    clearTimeout(timeoutId);
+                    if (!resp.ok) throw new Error('Upload failed with status ' + resp.status);
+                    await resp.text(); // consume response (we don't need JSON)
                     const chunkDuration = (performance.now() - chunkStart) / 1000;
                     if (chunkDuration > 0.1) {
                         const speed = (current * 8) / (chunkDuration * 1000000);
@@ -688,23 +617,31 @@
                     const progress = 50 + (uploaded / totalSize) * 45;
                     updateProgress('Uploading', progress, `Uploading... ${(uploaded/1024/1024).toFixed(1)}MB`);
                 } catch (e) {
-                    if (e.name === 'AbortError') throw e;
-                    console.warn('Upload chunk failed:', e);
+                    clearTimeout(timeoutId);
+                    if (e.name === 'AbortError') {
+                        console.warn('Upload chunk timed out, skipping...');
+                    } else {
+                        console.warn('Upload chunk failed:', e);
+                    }
+                    // If a chunk fails, we still continue with next chunk
+                    // but we may reduce total size to avoid infinite loop
+                    // For safety, break if too many failures
+                    break;
                 }
             }
 
             const totalDuration = (performance.now() - startTime) / 1000;
-            const avgSpeed = (totalSize * 8) / (totalDuration * 1000000);
+            const avgSpeed = (uploaded * 8) / (totalDuration * 1000000);
             if (measurements.length > 0) {
                 measurements.sort((a, b) => a - b);
                 const median = measurements[Math.floor(measurements.length / 2)];
                 return Math.min(avgSpeed, median * 1.2);
             }
-            return avgSpeed;
+            return avgSpeed || 0;
         }
 
         // -------------------------------------------------------------
-        // DETECT ISP (free IP info)
+        // DETECT ISP
         // -------------------------------------------------------------
         async function detectISP() {
             try {
@@ -790,7 +727,7 @@
                 const isp = await detectISP();
                 document.getElementById('ispInfo').textContent = isp;
 
-                // Start live latency monitoring
+                // Start live latency
                 startLiveLatency();
 
                 // Ping
