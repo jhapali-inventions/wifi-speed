@@ -131,7 +131,6 @@
             <span class="server" id="server1">📡 jsDelivr</span>
             <span class="server" id="server2">📡 cdnjs</span>
             <span class="server" id="server3">📡 unpkg</span>
-            <span class="server" id="server4">📡 GitHub</span>
         </div>
 
         <div class="info">
@@ -148,23 +147,22 @@
 
     <script>
         // ============================================================
-        // REAL SPEED TEST - Uses actual files from CDNs
+        // REAL SPEED TEST - Working upload with multiple endpoints
         // ============================================================
         
         let isTesting = false;
         let abortController = null;
 
-        // REAL download test files (all CORS-enabled, guaranteed to work)
+        // DOWNLOAD test files (all CORS-enabled)
         const TEST_FILES = [
-            // Large files from different CDNs for redundancy
             {
                 url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js',
-                size: 600000, // ~600KB
+                size: 600000,
                 name: 'Three.js'
             },
             {
                 url: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-                size: 550000, // ~550KB
+                size: 550000,
                 name: 'Three.js (cdnjs)'
             },
             {
@@ -172,7 +170,6 @@
                 size: 600000,
                 name: 'Three.js (unpkg)'
             },
-            // Also test with jQuery from different sources
             {
                 url: 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js',
                 size: 87000,
@@ -182,20 +179,16 @@
                 url: 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js',
                 size: 87000,
                 name: 'jQuery (cdnjs)'
-            },
-            // Larger file for better accuracy
-            {
-                url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_regular.typeface.json',
-                size: 450000,
-                name: 'Font'
             }
         ];
 
-        // Upload test endpoint (CORS-enabled, reliable)
-        const UPLOAD_URL = 'https://postman-echo.com/post';
-        const UPLOAD_SIZE = 2 * 1024 * 1024; // 2MB upload
+        // UPLOAD endpoints - multiple options for redundancy
+        const UPLOAD_ENDPOINTS = [
+            'https://httpbin.org/post',           // Reliable, CORS-enabled
+            'https://postman-echo.com/post',      // Backup
+        ];
 
-        // Ping test endpoints (reliable, CORS-enabled)
+        // Ping test endpoints
         const PING_URLS = [
             'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
@@ -221,11 +214,11 @@
 
         function markServerActive(serverId) {
             document.querySelectorAll('.server').forEach(s => s.classList.remove('active'));
-            document.getElementById(serverId).classList.add('active');
+            if (serverId) document.getElementById(serverId).classList.add('active');
         }
 
         // ============================================================
-        // MEASURE PING (using HEAD requests)
+        // MEASURE PING
         // ============================================================
         async function measurePing() {
             const pingTimes = [];
@@ -241,46 +234,34 @@
                         signal: abortController?.signal 
                     });
                     const latency = performance.now() - start;
-                    if (latency < 1000) { // Ignore outliers > 1s
+                    if (latency < 1000) {
                         pingTimes.push(latency);
                     }
                 } catch (e) {
                     if (e.name === 'AbortError') throw e;
-                    // Silently fail, continue
                 }
                 
-                // Update progress (0-10%)
                 const progress = ((i + 1) / attempts) * 10;
                 updateProgress('Pinging...', progress, `Ping ${i+1}/${attempts}`);
-                
-                // Wait between pings
                 if (i < attempts - 1) {
                     await new Promise(r => setTimeout(r, 150));
                 }
             }
 
             if (pingTimes.length === 0) return 0;
-            
-            // Sort and take median
             pingTimes.sort((a, b) => a - b);
-            const median = pingTimes[Math.floor(pingTimes.length / 2)];
-            return Math.round(median * 10) / 10;
+            return Math.round((pingTimes[Math.floor(pingTimes.length / 2)]) * 10) / 10;
         }
 
         // ============================================================
-        // MEASURE DOWNLOAD (using real files)
+        // MEASURE DOWNLOAD
         // ============================================================
         async function measureDownload() {
             const speeds = [];
-            let totalBytes = 0;
-            let totalTime = 0;
             
-            // Use first 4 files for download test
-            const filesToTest = TEST_FILES.slice(0, 4);
-            
-            for (let i = 0; i < filesToTest.length; i++) {
-                const file = filesToTest[i];
-                markServerActive('server' + (i + 1));
+            for (let i = 0; i < TEST_FILES.length; i++) {
+                const file = TEST_FILES[i];
+                markServerActive('server' + (i % 3 + 1));
                 
                 try {
                     const start = performance.now();
@@ -289,24 +270,18 @@
                         signal: abortController?.signal
                     });
                     
-                    if (!response.ok) {
-                        console.warn(`Failed to fetch ${file.url}: ${response.status}`);
-                        continue;
-                    }
+                    if (!response.ok) continue;
                     
                     const reader = response.body.getReader();
                     let received = 0;
-                    let lastUpdate = Date.now();
                     
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
                         received += value.length;
-                        totalBytes += value.length;
                         
-                        // Update progress (10-60%)
-                        const baseProgress = 10 + (i / filesToTest.length) * 50;
-                        const fileProgress = (received / (file.size || received)) * 50 / filesToTest.length;
+                        const baseProgress = 10 + (i / TEST_FILES.length) * 50;
+                        const fileProgress = (received / file.size) * 50 / TEST_FILES.length;
                         const progress = baseProgress + fileProgress;
                         
                         updateProgress(
@@ -317,89 +292,105 @@
                     }
                     
                     const duration = (performance.now() - start) / 1000;
-                    if (duration > 0.1) {
+                    if (duration > 0.1 && received > 10000) {
                         const speed = (received * 8) / (duration * 1000000);
                         speeds.push(speed);
-                        totalTime += duration;
                     }
                     
                 } catch (e) {
                     if (e.name === 'AbortError') throw e;
-                    console.warn(`Download test failed for ${file.name}:`, e);
-                    // Try next file
+                    console.warn(`Download failed for ${file.name}:`, e);
                 }
             }
 
             if (speeds.length === 0) return 0;
             
-            // Calculate average speed
             speeds.sort((a, b) => a - b);
-            // Remove outliers (10% on each side)
             const start = Math.floor(speeds.length * 0.1);
             const end = Math.ceil(speeds.length * 0.9);
             const trimmed = speeds.slice(start, end);
             
-            const avgSpeed = trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
-            return Math.max(0, avgSpeed);
+            return trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
         }
 
         // ============================================================
-        // MEASURE UPLOAD (using postman-echo)
+        // MEASURE UPLOAD - FIXED with multiple endpoints
         // ============================================================
         async function measureUpload() {
-            const chunkSize = 512 * 1024; // 512KB chunks
-            const totalSize = UPLOAD_SIZE;
+            const chunkSize = 256 * 1024; // 256KB chunks (smaller for reliability)
+            const totalSize = 2 * 1024 * 1024; // 2MB total
             let uploaded = 0;
             const speeds = [];
             const startTime = performance.now();
             
-            while (uploaded < totalSize) {
-                const currentSize = Math.min(chunkSize, totalSize - uploaded);
-                // Generate random data
-                const data = new Uint8Array(currentSize);
-                for (let i = 0; i < currentSize; i += 65536) {
-                    const end = Math.min(i + 65536, currentSize);
-                    const rand = crypto.getRandomValues(new Uint8Array(end - i));
-                    data.set(rand, i);
-                }
-                
-                const chunkStart = performance.now();
+            // Try each upload endpoint until one works
+            for (const endpoint of UPLOAD_ENDPOINTS) {
                 try {
-                    const formData = new FormData();
-                    formData.append('file', new Blob([data]), 'upload.bin');
-                    
-                    const response = await fetch(UPLOAD_URL, {
+                    // Test if endpoint works
+                    const testForm = new FormData();
+                    testForm.append('test', 'ping');
+                    const testResp = await fetch(endpoint, {
                         method: 'POST',
-                        body: formData,
+                        body: testForm,
                         signal: abortController?.signal
                     });
+                    if (!testResp.ok) continue;
                     
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    await response.text(); // Consume response
+                    console.log(`Using upload endpoint: ${endpoint}`);
                     
-                    const chunkDuration = (performance.now() - chunkStart) / 1000;
-                    if (chunkDuration > 0.1) {
-                        const speed = (currentSize * 8) / (chunkDuration * 1000000);
-                        speeds.push(speed);
+                    // Upload chunks
+                    while (uploaded < totalSize) {
+                        const currentSize = Math.min(chunkSize, totalSize - uploaded);
+                        const data = new Uint8Array(currentSize);
+                        for (let i = 0; i < currentSize; i += 65536) {
+                            const end = Math.min(i + 65536, currentSize);
+                            const rand = crypto.getRandomValues(new Uint8Array(end - i));
+                            data.set(rand, i);
+                        }
+                        
+                        const chunkStart = performance.now();
+                        const formData = new FormData();
+                        formData.append('file', new Blob([data]), 'upload.bin');
+                        
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            body: formData,
+                            signal: abortController?.signal
+                        });
+                        
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        await response.text(); // Consume response
+                        
+                        const chunkDuration = (performance.now() - chunkStart) / 1000;
+                        if (chunkDuration > 0.05) {
+                            const speed = (currentSize * 8) / (chunkDuration * 1000000);
+                            speeds.push(speed);
+                        }
+                        
+                        uploaded += currentSize;
+                        
+                        // Update progress (60-95%)
+                        const progress = 60 + (uploaded / totalSize) * 35;
+                        updateProgress(
+                            'Uploading...', 
+                            progress, 
+                            `Uploading... ${(uploaded/1024/1024).toFixed(2)}MB`
+                        );
                     }
                     
-                    uploaded += currentSize;
-                    
-                    // Update progress (60-95%)
-                    const progress = 60 + (uploaded / totalSize) * 35;
-                    updateProgress(
-                        'Uploading...', 
-                        progress, 
-                        `Uploading... ${(uploaded/1024/1024).toFixed(1)}MB`
-                    );
+                    // If we got here, upload succeeded
+                    break;
                     
                 } catch (e) {
                     if (e.name === 'AbortError') throw e;
-                    console.warn('Upload chunk failed:', e);
-                    break;
+                    console.warn(`Upload endpoint ${endpoint} failed:`, e);
+                    // Reset uploaded for next endpoint
+                    uploaded = 0;
+                    speeds.length = 0;
+                    continue;
                 }
             }
-            
+
             const totalDuration = (performance.now() - startTime) / 1000;
             const avgSpeed = (uploaded * 8) / (totalDuration * 1000000);
             
@@ -449,7 +440,6 @@
             button.textContent = 'Testing...';
             statusEl.textContent = 'Initializing...';
             
-            // Reset server indicators
             document.querySelectorAll('.server').forEach(s => s.classList.remove('active'));
             
             abortController = new AbortController();
@@ -467,7 +457,6 @@
                 document.getElementById('ping').textContent = pingResult.toFixed(1);
                 setLoading('ping', false);
                 
-                // Color code ping
                 const pingEl = document.getElementById('ping');
                 pingEl.style.color = pingResult < 50 ? '#10b981' : 
                                      pingResult < 100 ? '#f59e0b' : '#ef4444';
@@ -481,7 +470,6 @@
                 setLoading('downloadSpeed', false);
                 document.getElementById('downloadItem').classList.remove('active');
                 
-                // Color code download
                 const downloadEl = document.getElementById('downloadSpeed');
                 downloadEl.style.color = downloadResult > 50 ? '#10b981' : 
                                         downloadResult > 20 ? '#f59e0b' : '#ef4444';
@@ -495,7 +483,6 @@
                 setLoading('uploadSpeed', false);
                 document.getElementById('uploadItem').classList.remove('active');
                 
-                // Color code upload
                 const uploadEl = document.getElementById('uploadSpeed');
                 uploadEl.style.color = uploadResult > 20 ? '#10b981' : 
                                       uploadResult > 5 ? '#f59e0b' : '#ef4444';
@@ -536,7 +523,6 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('dataInfo').textContent = '~15 MB';
-            // Auto-start after 1 second
             setTimeout(startSpeedTest, 1000);
         });
     </script>
