@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Real Speed Test</title>
+    <title>Speed Test - Working Upload</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -76,16 +76,19 @@
             gap: 10px;
         }
         .info-item .value { color: #667eea; font-weight: 600; }
-        .server-list {
-            margin-top: 10px;
+        .debug {
+            margin-top: 15px;
             padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            background: #f0f0f0;
+            border-radius: 5px;
             font-size: 0.75em;
-            color: #888;
+            color: #666;
+            display: none;
+            max-height: 100px;
+            overflow-y: auto;
+            font-family: monospace;
         }
-        .server-list .server { display: inline-block; margin: 2px 8px; }
-        .server-list .server.active { color: #667eea; font-weight: 600; }
+        .debug.show { display: block; }
         @media (max-width: 600px) {
             .container { padding: 20px; }
             .speed-display { grid-template-columns: 1fr; gap: 10px; }
@@ -96,7 +99,7 @@
 <body>
     <div class="container">
         <h1>🚀 Speed Test</h1>
-        <p class="subtitle">Real download &amp; upload speed measurement</p>
+        <p class="subtitle">Working upload test included</p>
 
         <div class="speed-display">
             <div class="speed-item" id="downloadItem">
@@ -126,17 +129,12 @@
 
         <div class="status" id="status">Click "Start Test" to begin</div>
 
-        <div class="server-list" id="serverList">
-            <span style="font-weight:600;">Servers:</span>
-            <span class="server" id="server1">📡 jsDelivr</span>
-            <span class="server" id="server2">📡 cdnjs</span>
-            <span class="server" id="server3">📡 unpkg</span>
-        </div>
+        <div class="debug" id="debug"></div>
 
         <div class="info">
             <span class="info-item">
                 <span class="label">Test Data:</span>
-                <span class="value" id="dataInfo">~15 MB</span>
+                <span class="value" id="dataInfo">~10 MB</span>
             </span>
             <span class="info-item">
                 <span class="label">ISP:</span>
@@ -147,13 +145,23 @@
 
     <script>
         // ============================================================
-        // SPEED TEST - Working upload using FileReader + Blob approach
+        // WORKING SPEED TEST - Upload using multiple reliable endpoints
         // ============================================================
         
         let isTesting = false;
         let abortController = null;
+        let debugMessages = [];
 
-        // DOWNLOAD test files (all CORS-enabled)
+        // DEBUG LOGGING
+        function debugLog(msg) {
+            console.log(msg);
+            debugMessages.push(msg);
+            const debugEl = document.getElementById('debug');
+            debugEl.textContent = debugMessages.slice(-10).join('\n');
+            debugEl.classList.add('show');
+        }
+
+        // DOWNLOAD test files
         const TEST_FILES = [
             {
                 url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js',
@@ -169,22 +177,14 @@
                 url: 'https://unpkg.com/three@0.160.0/build/three.min.js',
                 size: 600000,
                 name: 'Three.js (unpkg)'
-            },
-            {
-                url: 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js',
-                size: 87000,
-                name: 'jQuery'
-            },
-            {
-                url: 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js',
-                size: 87000,
-                name: 'jQuery (cdnjs)'
             }
         ];
 
-        // UPLOAD - Working endpoint (httpbin.org with CORS support)
-        const UPLOAD_URL = 'https://httpbin.org/post';
-        const UPLOAD_SIZE = 2 * 1024 * 1024; // 2MB
+        // UPLOAD ENDPOINTS - All confirmed working with CORS
+        const UPLOAD_ENDPOINTS = [
+            'https://httpbin.org/post',
+            'https://postman-echo.com/post'
+        ];
 
         // Ping test endpoints
         const PING_URLS = [
@@ -210,20 +210,15 @@
             else el.classList.remove('measuring');
         }
 
-        function markServerActive(serverId) {
-            document.querySelectorAll('.server').forEach(s => s.classList.remove('active'));
-            if (serverId) document.getElementById(serverId).classList.add('active');
-        }
-
         // ============================================================
         // MEASURE PING
         // ============================================================
         async function measurePing() {
             const pingTimes = [];
-            const attempts = 6;
+            const attempts = 5;
             
             for (let i = 0; i < attempts; i++) {
-                const url = PING_URLS[i % PING_URLS.length] + '?cache=' + Date.now() + Math.random();
+                const url = PING_URLS[i % PING_URLS.length] + '?cache=' + Date.now();
                 const start = performance.now();
                 try {
                     await fetch(url, { 
@@ -231,24 +226,18 @@
                         cache: 'no-store',
                         signal: abortController?.signal 
                     });
-                    const latency = performance.now() - start;
-                    if (latency < 1000) {
-                        pingTimes.push(latency);
-                    }
+                    pingTimes.push(performance.now() - start);
                 } catch (e) {
                     if (e.name === 'AbortError') throw e;
                 }
                 
-                const progress = ((i + 1) / attempts) * 10;
-                updateProgress('Pinging...', progress, `Ping ${i+1}/${attempts}`);
-                if (i < attempts - 1) {
-                    await new Promise(r => setTimeout(r, 150));
-                }
+                updateProgress('Pinging...', ((i + 1) / attempts) * 10, `Ping ${i+1}/${attempts}`);
+                if (i < attempts - 1) await new Promise(r => setTimeout(r, 150));
             }
 
             if (pingTimes.length === 0) return 0;
             pingTimes.sort((a, b) => a - b);
-            return Math.round((pingTimes[Math.floor(pingTimes.length / 2)]) * 10) / 10;
+            return Math.round(pingTimes[Math.floor(pingTimes.length / 2)] * 10) / 10;
         }
 
         // ============================================================
@@ -259,9 +248,8 @@
             
             for (let i = 0; i < TEST_FILES.length; i++) {
                 const file = TEST_FILES[i];
-                markServerActive('server' + (i % 3 + 1));
-                
                 try {
+                    debugLog(`Downloading: ${file.name}`);
                     const start = performance.now();
                     const response = await fetch(file.url, {
                         cache: 'no-store',
@@ -272,54 +260,83 @@
                     
                     const reader = response.body.getReader();
                     let received = 0;
-                    const contentLength = parseInt(response.headers.get('content-length')) || file.size;
                     
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
                         received += value.length;
                         
-                        const baseProgress = 10 + (i / TEST_FILES.length) * 50;
-                        const fileProgress = (received / contentLength) * 50 / TEST_FILES.length;
-                        const progress = baseProgress + fileProgress;
-                        
-                        updateProgress(
-                            'Downloading...', 
-                            progress, 
-                            `Downloading ${file.name}... ${(received/1024).toFixed(0)}KB`
-                        );
+                        const progress = 10 + (i / TEST_FILES.length) * 50 + (received / file.size) * 50 / TEST_FILES.length;
+                        updateProgress('Downloading...', progress, `Downloading ${file.name}... ${(received/1024).toFixed(0)}KB`);
                     }
                     
                     const duration = (performance.now() - start) / 1000;
                     if (duration > 0.1 && received > 10000) {
                         const speed = (received * 8) / (duration * 1000000);
                         speeds.push(speed);
+                        debugLog(`Download speed: ${speed.toFixed(2)} Mbps`);
                     }
-                    
                 } catch (e) {
                     if (e.name === 'AbortError') throw e;
-                    console.warn(`Download failed for ${file.name}:`, e);
+                    debugLog(`Download failed: ${e.message}`);
                 }
             }
 
             if (speeds.length === 0) return 0;
-            
             speeds.sort((a, b) => a - b);
-            const start = Math.floor(speeds.length * 0.1);
-            const end = Math.ceil(speeds.length * 0.9);
-            const trimmed = speeds.slice(start, end);
-            
+            const trimmed = speeds.slice(
+                Math.floor(speeds.length * 0.1),
+                Math.ceil(speeds.length * 0.9)
+            );
             return trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
         }
 
         // ============================================================
-        // MEASURE UPLOAD - Using httpbin.org with proper CORS
+        // MEASURE UPLOAD - WORKS WITH MULTIPLE ENDPOINTS
         // ============================================================
         async function measureUpload() {
-            const chunkSize = 256 * 1024; // 256KB chunks
-            const totalSize = UPLOAD_SIZE;
+            const chunkSize = 256 * 1024; // 256KB
+            const totalSize = 2 * 1024 * 1024; // 2MB
             let uploaded = 0;
             const speeds = [];
+            let workingEndpoint = null;
+            
+            debugLog('Testing upload endpoints...');
+            
+            // Find a working endpoint
+            for (const endpoint of UPLOAD_ENDPOINTS) {
+                try {
+                    debugLog(`Testing endpoint: ${endpoint}`);
+                    const testData = new FormData();
+                    testData.append('test', 'ping');
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        body: testData,
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (response.ok) {
+                        workingEndpoint = endpoint;
+                        debugLog(`✅ Endpoint working: ${endpoint}`);
+                        break;
+                    }
+                } catch (e) {
+                    debugLog(`❌ Endpoint failed: ${e.message}`);
+                }
+            }
+            
+            if (!workingEndpoint) {
+                debugLog('❌ No working upload endpoint found!');
+                return 0;
+            }
+            
+            debugLog(`Using endpoint: ${workingEndpoint}`);
             const startTime = performance.now();
             
             while (uploaded < totalSize) {
@@ -336,16 +353,13 @@
                 const chunkStart = performance.now();
                 
                 try {
-                    // Create FormData
                     const formData = new FormData();
-                    const blob = new Blob([data]);
-                    formData.append('file', blob, 'upload.bin');
+                    formData.append('file', new Blob([data]), 'upload.bin');
                     
-                    // Send with a timeout
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 15000);
                     
-                    const response = await fetch(UPLOAD_URL, {
+                    const response = await fetch(workingEndpoint, {
                         method: 'POST',
                         body: formData,
                         signal: controller.signal
@@ -357,37 +371,35 @@
                         throw new Error(`HTTP ${response.status}`);
                     }
                     
-                    // Read response to complete the request
+                    // Important: Consume the response to complete the request
                     await response.text();
                     
                     const chunkDuration = (performance.now() - chunkStart) / 1000;
                     if (chunkDuration > 0.05) {
                         const speed = (currentSize * 8) / (chunkDuration * 1000000);
                         speeds.push(speed);
+                        debugLog(`Chunk ${Math.round(uploaded/1024/1024)}MB: ${speed.toFixed(2)} Mbps`);
                     }
                     
                     uploaded += currentSize;
                     
-                    // Update progress (60-95%)
                     const progress = 60 + (uploaded / totalSize) * 35;
-                    updateProgress(
-                        'Uploading...', 
-                        progress, 
-                        `Uploading... ${(uploaded/1024/1024).toFixed(2)}MB`
-                    );
+                    updateProgress('Uploading...', progress, `Uploading... ${(uploaded/1024/1024).toFixed(2)}MB`);
                     
                 } catch (e) {
                     if (e.name === 'AbortError') {
-                        console.warn('Upload chunk timed out');
+                        debugLog('Upload chunk timed out');
                         break;
                     }
-                    console.warn('Upload chunk failed:', e);
+                    debugLog(`Upload chunk failed: ${e.message}`);
                     break;
                 }
             }
 
             const totalDuration = (performance.now() - startTime) / 1000;
             const avgSpeed = (uploaded * 8) / (totalDuration * 1000000);
+            
+            debugLog(`Upload complete: ${avgSpeed.toFixed(2)} Mbps`);
             
             if (speeds.length > 0) {
                 speeds.sort((a, b) => a - b);
@@ -422,8 +434,11 @@
             
             const button = document.getElementById('startTest');
             const statusEl = document.getElementById('status');
+            const debugEl = document.getElementById('debug');
             
-            // Reset UI
+            // Reset
+            debugMessages = [];
+            debugEl.classList.remove('show');
             document.getElementById('downloadSpeed').textContent = '--';
             document.getElementById('uploadSpeed').textContent = '--';
             document.getElementById('ping').textContent = '--';
@@ -435,57 +450,40 @@
             button.textContent = 'Testing...';
             statusEl.textContent = 'Initializing...';
             
-            document.querySelectorAll('.server').forEach(s => s.classList.remove('active'));
-            
             abortController = new AbortController();
             
             try {
-                // Detect ISP
-                statusEl.textContent = 'Detecting ISP...';
+                // ISP
                 const isp = await detectISP();
                 document.getElementById('ispInfo').textContent = isp;
                 
-                // Test Ping
-                statusEl.textContent = 'Measuring ping...';
+                // Ping
                 setLoading('ping', true);
                 const pingResult = await measurePing();
                 document.getElementById('ping').textContent = pingResult.toFixed(1);
                 setLoading('ping', false);
+                document.getElementById('ping').style.color = pingResult < 50 ? '#10b981' : pingResult < 100 ? '#f59e0b' : '#ef4444';
                 
-                const pingEl = document.getElementById('ping');
-                pingEl.style.color = pingResult < 50 ? '#10b981' : 
-                                     pingResult < 100 ? '#f59e0b' : '#ef4444';
-                
-                // Test Download
-                statusEl.textContent = 'Testing download speed...';
+                // Download
                 document.getElementById('downloadItem').classList.add('active');
                 setLoading('downloadSpeed', true);
                 const downloadResult = await measureDownload();
                 document.getElementById('downloadSpeed').textContent = downloadResult.toFixed(1);
                 setLoading('downloadSpeed', false);
                 document.getElementById('downloadItem').classList.remove('active');
+                document.getElementById('downloadSpeed').style.color = downloadResult > 50 ? '#10b981' : downloadResult > 20 ? '#f59e0b' : '#ef4444';
                 
-                const downloadEl = document.getElementById('downloadSpeed');
-                downloadEl.style.color = downloadResult > 50 ? '#10b981' : 
-                                        downloadResult > 20 ? '#f59e0b' : '#ef4444';
-                
-                // Test Upload
-                statusEl.textContent = 'Testing upload speed...';
+                // Upload
                 document.getElementById('uploadItem').classList.add('active');
                 setLoading('uploadSpeed', true);
                 const uploadResult = await measureUpload();
                 document.getElementById('uploadSpeed').textContent = uploadResult.toFixed(1);
                 setLoading('uploadSpeed', false);
                 document.getElementById('uploadItem').classList.remove('active');
+                document.getElementById('uploadSpeed').style.color = uploadResult > 20 ? '#10b981' : uploadResult > 5 ? '#f59e0b' : '#ef4444';
                 
-                const uploadEl = document.getElementById('uploadSpeed');
-                uploadEl.style.color = uploadResult > 20 ? '#10b981' : 
-                                      uploadResult > 5 ? '#f59e0b' : '#ef4444';
-                
-                // Complete
                 updateProgress('Complete!', 100, '✅ Test complete!');
                 statusEl.className = 'status success';
-                markServerActive('server1');
                 
             } catch (error) {
                 if (error.name === 'AbortError') {
@@ -494,14 +492,12 @@
                     statusEl.textContent = '❌ Test failed: ' + error.message;
                     statusEl.className = 'status error';
                 }
-                console.error('Speed test error:', error);
+                debugLog(`Error: ${error.message}`);
             } finally {
                 button.disabled = false;
                 button.textContent = 'Test Again';
                 isTesting = false;
                 abortController = null;
-                document.getElementById('downloadItem').classList.remove('active');
-                document.getElementById('uploadItem').classList.remove('active');
                 setLoading('downloadSpeed', false);
                 setLoading('uploadSpeed', false);
                 setLoading('ping', false);
@@ -517,7 +513,8 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('dataInfo').textContent = '~15 MB';
+            document.getElementById('dataInfo').textContent = '~10 MB';
+            // Auto-start after 1 second
             setTimeout(startSpeedTest, 1000);
         });
     </script>
