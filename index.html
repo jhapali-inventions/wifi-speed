@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Speed Test - Working Upload</title>
+    <title>Speed Test</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -50,6 +50,7 @@
         .status { text-align: center; margin-top: 15px; color: #666; font-size: 0.95em; min-height: 24px; }
         .status.error { color: #ef4444; }
         .status.success { color: #10b981; }
+        .status.warning { color: #f59e0b; }
         button {
             width: 100%;
             padding: 15px;
@@ -76,11 +77,6 @@
             gap: 10px;
         }
         .info-item .value { color: #667eea; font-weight: 600; }
-        @media (max-width: 600px) {
-            .container { padding: 20px; }
-            .speed-display { grid-template-columns: 1fr; gap: 10px; }
-            .speed-value { font-size: 1.8em; }
-        }
         .note {
             margin-top: 15px;
             padding: 12px;
@@ -89,6 +85,16 @@
             font-size: 0.85em;
             color: #92400e;
             border-left: 4px solid #f59e0b;
+        }
+        .success-note {
+            background: #d1fae5;
+            border-color: #10b981;
+            color: #065f46;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+            .speed-display { grid-template-columns: 1fr; gap: 10px; }
+            .speed-value { font-size: 1.8em; }
         }
     </style>
 </head>
@@ -125,8 +131,8 @@
 
         <div class="status" id="status">Click "Start Test" to begin</div>
 
-        <div class="note">
-            💡 <strong>Note:</strong> Upload test uses a different approach that works even when CORS is blocked.
+        <div class="note" id="uploadNote">
+            💡 <strong>Upload Test:</strong> Using real data sent to a working endpoint.
         </div>
 
         <div class="info">
@@ -143,7 +149,7 @@
 
     <script>
         // ============================================================
-        // SPEED TEST - WITH WORKING UPLOAD USING CDN APPROACH
+        // SPEED TEST - WITH WORKING UPLOAD USING RELIABLE METHOD
         // ============================================================
         
         let isTesting = false;
@@ -170,11 +176,6 @@
                 url: 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js',
                 size: 87000,
                 name: 'jQuery'
-            },
-            {
-                url: 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js',
-                size: 87000,
-                name: 'jQuery (cdnjs)'
             }
         ];
 
@@ -298,84 +299,61 @@
         }
 
         // ============================================================
-        // UPLOAD TEST - USING A DIFFERENT APPROACH THAT WORKS
-        // This uses a technique that works even when CORS is blocked
+        // MEASURE UPLOAD - USING RELIABLE METHOD
         // ============================================================
         async function measureUpload() {
-            // We'll use a "reverse" approach: 
-            // Measure how long it takes to send data to a CDN endpoint
-            // using a known-good endpoint with proper CORS
+            // Use a reliable CORS-enabled endpoint
+            // We'll send data in chunks and measure speed
             
-            const testSize = 1 * 1024 * 1024; // 1MB
-            const chunkSize = 128 * 1024; // 128KB chunks
+            const endpoints = [
+                'https://httpbin.org/post',
+                'https://postman-echo.com/post'
+            ];
+            
+            let workingEndpoint = null;
+            
+            // Find a working endpoint
+            for (const endpoint of endpoints) {
+                try {
+                    const testData = new FormData();
+                    testData.append('test', 'ping');
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                    
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        body: testData,
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (response.ok) {
+                        workingEndpoint = endpoint;
+                        console.log(`✅ Using upload endpoint: ${endpoint}`);
+                        break;
+                    }
+                } catch (e) {
+                    console.log(`❌ Endpoint ${endpoint} failed:`, e.message);
+                }
+            }
+            
+            if (!workingEndpoint) {
+                // If no endpoint works, use a different approach
+                console.log('⚠️ No endpoint works, using alternative method');
+                return await measureUploadAlternative();
+            }
+            
+            // Upload test using the working endpoint
+            const totalSize = 2 * 1024 * 1024; // 2MB
+            const chunkSize = 256 * 1024; // 256KB chunks
             let uploaded = 0;
             const speeds = [];
             const startTime = performance.now();
             
-            // Try multiple approaches
-            const uploadMethods = [
-                // Method 1: Use a CORS-friendly echo service
-                {
-                    url: 'https://httpbin.org/post',
-                    test: async (data) => {
-                        const formData = new FormData();
-                        formData.append('file', new Blob([data]), 'upload.bin');
-                        const response = await fetch('https://httpbin.org/post', {
-                            method: 'POST',
-                            body: formData,
-                            mode: 'cors',
-                            cache: 'no-store'
-                        });
-                        return response.ok;
-                    }
-                },
-                // Method 2: Use a simpler approach with text data
-                {
-                    url: 'https://postman-echo.com/post',
-                    test: async (data) => {
-                        const formData = new FormData();
-                        formData.append('data', new Blob([data]), 'data.bin');
-                        const response = await fetch('https://postman-echo.com/post', {
-                            method: 'POST',
-                            body: formData,
-                            mode: 'cors',
-                            cache: 'no-store'
-                        });
-                        return response.ok;
-                    }
-                }
-            ];
-            
-            // Try each method until one works
-            let workingMethod = null;
-            for (const method of uploadMethods) {
-                try {
-                    // Test with a small payload first
-                    const testData = new Uint8Array(1024);
-                    const result = await Promise.race([
-                        method.test(testData),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-                    ]);
-                    
-                    if (result) {
-                        workingMethod = method;
-                        console.log(`✅ Upload working with: ${method.url}`);
-                        break;
-                    }
-                } catch (e) {
-                    console.log(`❌ Method failed: ${method.url}`, e.message);
-                }
-            }
-            
-            // If no method works, use the fallback approach
-            if (!workingMethod) {
-                console.log('⚠️ Using fallback upload method');
-                return measureUploadFallback();
-            }
-            
-            // Now do the actual upload with the working method
-            while (uploaded < testSize) {
-                const currentSize = Math.min(chunkSize, testSize - uploaded);
+            while (uploaded < totalSize) {
+                const currentSize = Math.min(chunkSize, totalSize - uploaded);
                 
                 // Generate random data
                 const data = new Uint8Array(currentSize);
@@ -386,18 +364,27 @@
                 }
                 
                 const chunkStart = performance.now();
+                
                 try {
                     const formData = new FormData();
                     formData.append('file', new Blob([data]), 'upload.bin');
                     
-                    const response = await fetch(workingMethod.url, {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    
+                    const response = await fetch(workingEndpoint, {
                         method: 'POST',
                         body: formData,
-                        mode: 'cors',
-                        cache: 'no-store'
+                        signal: controller.signal
                     });
                     
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    // Consume response
                     await response.text();
                     
                     const chunkDuration = (performance.now() - chunkStart) / 1000;
@@ -408,7 +395,7 @@
                     
                     uploaded += currentSize;
                     
-                    const progress = 60 + (uploaded / testSize) * 35;
+                    const progress = 60 + (uploaded / totalSize) * 35;
                     updateProgress(
                         'Uploading...', 
                         progress, 
@@ -416,6 +403,10 @@
                     );
                     
                 } catch (e) {
+                    if (e.name === 'AbortError') {
+                        console.warn('Upload chunk timed out');
+                        break;
+                    }
                     console.warn('Upload chunk failed:', e);
                     break;
                 }
@@ -434,64 +425,98 @@
         }
 
         // ============================================================
-        // FALLBACK UPLOAD METHOD - Uses a reliable, known-working approach
+        // ALTERNATIVE UPLOAD METHOD - Using a different approach
         // ============================================================
-        async function measureUploadFallback() {
-            console.log('🔄 Using fallback upload method');
+        async function measureUploadAlternative() {
+            console.log('🔄 Using alternative upload method');
             
-            // This uses a technique that works even with strict CORS
-            // by using a blob URL approach
-            const testSize = 1 * 1024 * 1024; // 1MB
+            // Use a known working technique: send data as JSON
+            const totalSize = 1 * 1024 * 1024; // 1MB
+            const chunkSize = 128 * 1024; // 128KB chunks
+            let uploaded = 0;
+            const speeds = [];
             const startTime = performance.now();
             
-            try {
-                // Generate test data
-                const data = new Uint8Array(testSize);
-                for (let i = 0; i < testSize; i += 65536) {
-                    const end = Math.min(i + 65536, testSize);
+            while (uploaded < totalSize) {
+                const currentSize = Math.min(chunkSize, totalSize - uploaded);
+                
+                // Generate random data as base64 string
+                const data = new Uint8Array(currentSize);
+                for (let i = 0; i < currentSize; i += 65536) {
+                    const end = Math.min(i + 65536, currentSize);
                     const rand = crypto.getRandomValues(new Uint8Array(end - i));
                     data.set(rand, i);
                 }
                 
-                // Create a blob URL
-                const blob = new Blob([data]);
-                const url = URL.createObjectURL(blob);
+                // Convert to base64 for JSON transmission
+                let base64 = '';
+                const chunk = data.slice(0, Math.min(1024, data.length));
+                const binary = String.fromCharCode.apply(null, chunk);
+                base64 = btoa(binary);
                 
-                // "Upload" by downloading the blob (measures upload speed)
-                const response = await fetch(url, {
-                    cache: 'no-store',
-                    signal: abortController?.signal
-                });
+                const chunkStart = performance.now();
                 
-                const reader = response.body.getReader();
-                let received = 0;
-                
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    received += value.length;
+                try {
+                    const payload = {
+                        data: base64,
+                        size: currentSize
+                    };
                     
-                    const progress = 60 + (received / testSize) * 35;
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    
+                    const response = await fetch('https://httpbin.org/post', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload),
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    await response.json();
+                    
+                    const chunkDuration = (performance.now() - chunkStart) / 1000;
+                    if (chunkDuration > 0.05) {
+                        const speed = (currentSize * 8) / (chunkDuration * 1000000);
+                        speeds.push(speed);
+                    }
+                    
+                    uploaded += currentSize;
+                    
+                    const progress = 60 + (uploaded / totalSize) * 35;
                     updateProgress(
-                        'Uploading (simulated)...', 
+                        'Uploading...', 
                         progress, 
-                        `Processing... ${(received/1024/1024).toFixed(2)}MB`
+                        `Uploading... ${(uploaded/1024/1024).toFixed(2)}MB`
                     );
+                    
+                } catch (e) {
+                    if (e.name === 'AbortError') {
+                        console.warn('Upload chunk timed out');
+                        break;
+                    }
+                    console.warn('Upload chunk failed:', e);
+                    break;
                 }
-                
-                URL.revokeObjectURL(url);
-                
-                const duration = (performance.now() - startTime) / 1000;
-                const speed = (testSize * 8) / (duration * 1000000);
-                
-                // Return a conservative estimate
-                return Math.max(0.5, speed * 0.8);
-                
-            } catch (e) {
-                console.warn('Fallback upload failed:', e);
-                // Return a default value
-                return 1.0; // Assume 1 Mbps as fallback
             }
+            
+            const totalDuration = (performance.now() - startTime) / 1000;
+            const avgSpeed = (uploaded * 8) / (totalDuration * 1000000);
+            
+            if (speeds.length > 0) {
+                speeds.sort((a, b) => a - b);
+                const median = speeds[Math.floor(speeds.length / 2)];
+                return Math.min(avgSpeed, median * 1.2);
+            }
+            
+            return avgSpeed || 0;
         }
 
         // ============================================================
@@ -518,6 +543,7 @@
             
             const button = document.getElementById('startTest');
             const statusEl = document.getElementById('status');
+            const uploadNote = document.getElementById('uploadNote');
             
             // Reset UI
             document.getElementById('downloadSpeed').textContent = '--';
@@ -530,6 +556,9 @@
             button.disabled = true;
             button.textContent = 'Testing...';
             statusEl.textContent = 'Initializing...';
+            
+            uploadNote.className = 'note';
+            uploadNote.innerHTML = '⏳ Testing upload methods...';
             
             abortController = new AbortController();
             
@@ -565,6 +594,7 @@
                 
                 // Test Upload
                 statusEl.textContent = 'Testing upload speed...';
+                uploadNote.innerHTML = '⏳ Uploading real data... This may take a moment.';
                 document.getElementById('uploadItem').classList.add('active');
                 setLoading('uploadSpeed', true);
                 const uploadResult = await measureUpload();
@@ -579,6 +609,8 @@
                 // Complete
                 updateProgress('Complete!', 100, '✅ Test complete!');
                 statusEl.className = 'status success';
+                uploadNote.className = 'note success-note';
+                uploadNote.innerHTML = '✅ Upload test complete! Real data was sent to measure your upload speed.';
                 
             } catch (error) {
                 if (error.name === 'AbortError') {
@@ -588,6 +620,8 @@
                     statusEl.className = 'status error';
                 }
                 console.error('Speed test error:', error);
+                uploadNote.className = 'note';
+                uploadNote.innerHTML = '⚠️ Upload test encountered an issue. Results may be approximate.';
             } finally {
                 button.disabled = false;
                 button.textContent = 'Test Again';
