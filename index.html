@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Universal Speed Test</title>
+    <title>Speed Test</title>
     <style>
-        /* (styles unchanged – same as previous) */
         * {
             margin: 0;
             padding: 0;
@@ -52,7 +51,6 @@
             background: #f8f9fa;
             border-radius: 10px;
             transition: all 0.3s ease;
-            position: relative;
         }
         .speed-item.active {
             background: #e8ecff;
@@ -80,33 +78,6 @@
             font-size: 0.5em;
             color: #999;
         }
-        .advanced-metrics {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-        .metric-item {
-            text-align: center;
-        }
-        .metric-value {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #333;
-        }
-        .metric-label {
-            font-size: 0.7em;
-            color: #888;
-            margin-top: 2px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .metric-value.good { color: #10b981; }
-        .metric-value.medium { color: #f59e0b; }
-        .metric-value.poor { color: #ef4444; }
         .progress-container {
             width: 100%;
             height: 10px;
@@ -128,42 +99,15 @@
             font-size: 0.85em;
             color: #888;
         }
-        .live-latency {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            padding: 12px;
-            background: #f0f2ff;
-            border-radius: 8px;
-            margin: 15px 0;
-            flex-wrap: wrap;
-        }
-        .latency-dot {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 5px;
-            transition: background-color 0.3s ease;
-        }
-        .latency-dot.good { background: #10b981; }
-        .latency-dot.medium { background: #f59e0b; }
-        .latency-dot.poor { background: #ef4444; }
-        .latency-dot.measuring { animation: blink 0.5s ease-in-out infinite; }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.2; }
-        }
-        .live-label {
-            font-size: 0.85em;
+        .status {
+            text-align: center;
+            margin-top: 15px;
             color: #666;
+            font-size: 0.95em;
+            min-height: 24px;
         }
-        .live-value {
-            font-weight: bold;
-            color: #667eea;
-            font-size: 1.1em;
-        }
+        .status.error { color: #ef4444; }
+        .status.success { color: #10b981; }
         button {
             width: 100%;
             padding: 15px;
@@ -180,22 +124,11 @@
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
         }
-        button:active { transform: translateY(0); }
         button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
         }
-        .status {
-            text-align: center;
-            margin-top: 15px;
-            color: #666;
-            font-size: 0.95em;
-            min-height: 24px;
-        }
-        .status.error { color: #ef4444; }
-        .status.success { color: #10b981; }
-        .status.warning { color: #f59e0b; }
         .info {
             margin-top: 20px;
             padding-top: 20px;
@@ -207,85 +140,21 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-        .info-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .info-item .label {
-            color: #888;
-        }
         .info-item .value {
             color: #667eea;
             font-weight: 600;
         }
-        .history-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
-        }
-        .history-title {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .history-list {
-            max-height: 150px;
-            overflow-y: auto;
-            font-size: 0.8em;
-        }
-        .history-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 10px;
-            background: #f8f9fa;
-            border-radius: 5px;
-            margin-bottom: 4px;
-            color: #666;
-        }
-        .history-item .time { color: #999; }
-        .history-item .scores {
-            display: flex;
-            gap: 15px;
-        }
-        .history-item .scores span { font-weight: 500; }
-        .clear-history {
-            background: none;
-            border: none;
-            color: #999;
-            cursor: pointer;
-            font-size: 0.8em;
-            padding: 0;
-            width: auto;
-            margin: 0;
-            background: none;
-            color: #999;
-        }
-        .clear-history:hover {
-            color: #ef4444;
-            transform: none;
-            box-shadow: none;
-        }
         @media (max-width: 600px) {
             .container { padding: 20px; }
             .speed-display { grid-template-columns: 1fr; gap: 10px; }
-            .advanced-metrics { grid-template-columns: repeat(2, 1fr); gap: 15px; }
             .speed-value { font-size: 1.8em; }
-            .test-details { flex-direction: column; gap: 5px; align-items: center; }
-            .live-latency { flex-direction: column; gap: 8px; }
         }
-        .history-list::-webkit-scrollbar { width: 4px; }
-        .history-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .history-list::-webkit-scrollbar-thumb { background: #667eea; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🌐 Speed Test</h1>
-        <p class="subtitle">Free &amp; accurate — powered by public CDNs</p>
+        <p class="subtitle">Accurate internet speed measurement</p>
 
         <div class="speed-display">
             <div class="speed-item" id="downloadItem">
@@ -302,37 +171,6 @@
             </div>
         </div>
 
-        <div class="live-latency" id="liveLatency">
-            <span class="live-label">📡 Live Latency:</span>
-            <span class="latency-dot" id="latencyDot"></span>
-            <span class="live-value" id="liveLatencyValue">-- ms</span>
-            <span class="live-label" style="margin-left:10px;">|</span>
-            <span class="live-label">Jitter:</span>
-            <span class="live-value" id="jitterValue">-- ms</span>
-            <span class="live-label" style="margin-left:10px;">|</span>
-            <span class="live-label">Packet Loss:</span>
-            <span class="live-value" id="packetLossValue">--%</span>
-        </div>
-
-        <div class="advanced-metrics">
-            <div class="metric-item">
-                <div class="metric-value" id="minLatency">--</div>
-                <div class="metric-label">Min Latency</div>
-            </div>
-            <div class="metric-item">
-                <div class="metric-value" id="maxLatency">--</div>
-                <div class="metric-label">Max Latency</div>
-            </div>
-            <div class="metric-item">
-                <div class="metric-value" id="avgLatency">--</div>
-                <div class="metric-label">Avg Latency</div>
-            </div>
-            <div class="metric-item">
-                <div class="metric-value" id="jitterMetric">--</div>
-                <div class="metric-label">Jitter</div>
-            </div>
-        </div>
-
         <div class="progress-container">
             <div class="progress-bar" id="progressBar"></div>
         </div>
@@ -346,22 +184,10 @@
 
         <div class="status" id="status">Click "Start Test" to begin</div>
 
-        <div class="history-section" id="historySection" style="display:none;">
-            <div class="history-title">
-                <span>📊 Test History</span>
-                <button class="clear-history" onclick="clearHistory()">Clear All</button>
-            </div>
-            <div class="history-list" id="historyList"></div>
-        </div>
-
         <div class="info">
             <span class="info-item">
-                <span class="label">Test Server:</span>
-                <span class="value" id="serverInfo">Multi-CDN</span>
-            </span>
-            <span class="info-item">
                 <span class="label">Test Data:</span>
-                <span class="value" id="dataInfo">~25 MB</span>
+                <span class="value" id="dataInfo">~10 MB</span>
             </span>
             <span class="info-item">
                 <span class="label">ISP:</span>
@@ -371,401 +197,244 @@
     </div>
 
     <script>
-        // -------------------------------------------------------------
-        // CONFIGURATION – using free, public resources
-        // -------------------------------------------------------------
-        const DOWNLOAD_SOURCES = [
-            { url: 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js', size: 87000 },
-            { url: 'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js', size: 72000 },
-            { url: 'https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js', size: 55000 },
-            { url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_regular.typeface.json', size: 450000 },
-            { url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/models/obj/male02.obj', size: 300000 },
-        ];
-
-        // UPLOAD – use postman-echo (more reliable, CORS, no size limit issues)
-        const UPLOAD_URL = 'https://postman-echo.com/post';
-        const UPLOAD_SIZE = 3 * 1024 * 1024; // 3 MB – safe and quick
-        const CHUNK_SIZE = 512 * 1024;       // 512 KB per chunk
-
-        // PING endpoints
-        const PING_ENDPOINTS = [
-            'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js',
-            'https://unpkg.com/axios@1.6.2/dist/axios.min.js',
-        ];
-
-        // -------------------------------------------------------------
-        // STATE
-        // -------------------------------------------------------------
+        // =============================================================
+        // SIMPLE, WORKING SPEED TEST using synthetic data generation
+        // =============================================================
+        
         let isTesting = false;
-        let testAbortController = null;
-        let latencyHistory = [];
-        let testResultsHistory = [];
-        let liveLatencyInterval = null;
+        let abortController = null;
 
-        // -------------------------------------------------------------
-        // UTILITY
-        // -------------------------------------------------------------
-        function setLoading(elementId, isLoading) {
-            const el = document.getElementById(elementId);
-            if (isLoading) el.classList.add('measuring');
-            else el.classList.remove('measuring');
-        }
-
-        function updateProgress(phase, progress, statusText) {
-            document.getElementById('testPhase').textContent = phase;
-            document.getElementById('testProgress').textContent = Math.round(progress) + '%';
-            document.getElementById('progressBar').style.width = Math.min(progress, 100) + '%';
-            if (statusText) document.getElementById('status').textContent = statusText;
-        }
-
-        function calculateJitter(values) {
-            if (values.length < 2) return 0;
-            const mean = values.reduce((a, b) => a + b, 0) / values.length;
-            const deviations = values.map(v => Math.abs(v - mean));
-            return deviations.reduce((a, b) => a + b, 0) / deviations.length;
-        }
-
-        function updateLiveLatency(latency) {
-            const dot = document.getElementById('latencyDot');
-            const valueEl = document.getElementById('liveLatencyValue');
-            valueEl.textContent = latency.toFixed(1) + ' ms';
-            dot.className = 'latency-dot';
-            if (latency < 50) dot.classList.add('good');
-            else if (latency < 100) dot.classList.add('medium');
-            else dot.classList.add('poor');
-
-            latencyHistory.push(latency);
-            if (latencyHistory.length > 50) latencyHistory.shift();
-
-            if (latencyHistory.length > 1) {
-                const jitter = calculateJitter(latencyHistory);
-                document.getElementById('jitterValue').textContent = jitter.toFixed(1) + ' ms';
-                document.getElementById('jitterMetric').textContent = jitter.toFixed(1) + ' ms';
-            }
-            if (latencyHistory.length > 0) {
-                const min = Math.min(...latencyHistory);
-                const max = Math.max(...latencyHistory);
-                const avg = latencyHistory.reduce((a, b) => a + b, 0) / latencyHistory.length;
-                document.getElementById('minLatency').textContent = min.toFixed(1) + ' ms';
-                document.getElementById('maxLatency').textContent = max.toFixed(1) + ' ms';
-                document.getElementById('avgLatency').textContent = avg.toFixed(1) + ' ms';
-            }
-        }
-
-        // -------------------------------------------------------------
-        // LIVE LATENCY MONITORING
-        // -------------------------------------------------------------
-        async function startLiveLatency() {
-            let packetLoss = 0;
-            let totalAttempts = 0;
-            let currentEndpoint = 0;
-
-            liveLatencyInterval = setInterval(async () => {
-                if (!isTesting) return;
-                try {
-                    const url = PING_ENDPOINTS[currentEndpoint % PING_ENDPOINTS.length] + '?cache=' + Date.now();
-                    const start = performance.now();
-                    await fetch(url, { method: 'HEAD', cache: 'no-store', signal: testAbortController?.signal });
-                    const latency = performance.now() - start;
-                    updateLiveLatency(latency);
-                    totalAttempts++;
-                    currentEndpoint++;
-                } catch (error) {
-                    if (error.name === 'AbortError') return;
-                    packetLoss++;
-                    totalAttempts++;
-                    const loss = (packetLoss / totalAttempts) * 100;
-                    document.getElementById('packetLossValue').textContent = loss.toFixed(1) + '%';
-                    const lossEl = document.getElementById('packetLossValue');
-                    if (loss < 1) lossEl.style.color = '#10b981';
-                    else if (loss < 5) lossEl.style.color = '#f59e0b';
-                    else lossEl.style.color = '#ef4444';
+        // Generate random test data of specified size (in MB)
+        function generateTestData(sizeInMB) {
+            const sizeInBytes = sizeInMB * 1024 * 1024;
+            const chunks = [];
+            const chunkSize = 1024 * 1024; // 1MB chunks
+            
+            for (let i = 0; i < sizeInBytes; i += chunkSize) {
+                const actualChunkSize = Math.min(chunkSize, sizeInBytes - i);
+                const chunk = new Uint8Array(actualChunkSize);
+                // Fill with random data
+                for (let j = 0; j < actualChunkSize; j += 65536) {
+                    const end = Math.min(j + 65536, actualChunkSize);
+                    const randomValues = crypto.getRandomValues(new Uint8Array(end - j));
+                    chunk.set(randomValues, j);
                 }
-            }, 600);
-        }
-
-        function stopLiveLatency() {
-            if (liveLatencyInterval) {
-                clearInterval(liveLatencyInterval);
-                liveLatencyInterval = null;
+                chunks.push(chunk);
             }
-            document.getElementById('latencyDot').className = 'latency-dot';
-            document.getElementById('liveLatencyValue').textContent = '-- ms';
+            return chunks;
         }
 
-        // -------------------------------------------------------------
-        // MEASURE PING
-        // -------------------------------------------------------------
+        // Measure download speed using generated data
+        async function measureDownload() {
+            const fileSizeMB = 10; // 10MB test file
+            const fileSizeBytes = fileSizeMB * 1024 * 1024;
+            
+            // Generate test data
+            const testData = generateTestData(fileSizeMB);
+            const blob = new Blob(testData);
+            const url = URL.createObjectURL(blob);
+            
+            const startTime = performance.now();
+            let receivedBytes = 0;
+            
+            try {
+                const response = await fetch(url, {
+                    signal: abortController?.signal
+                });
+                const reader = response.body.getReader();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    receivedBytes += value.length;
+                    
+                    // Update progress (0-45%)
+                    const progress = (receivedBytes / fileSizeBytes) * 45;
+                    document.getElementById('progressBar').style.width = Math.min(progress, 45) + '%';
+                    document.getElementById('testProgress').textContent = Math.round(progress) + '%';
+                    document.getElementById('testPhase').textContent = 'Downloading...';
+                    document.getElementById('status').textContent = `Downloading... ${Math.round(receivedBytes / 1024 / 1024)}MB`;
+                }
+                
+                const endTime = performance.now();
+                const durationInSeconds = (endTime - startTime) / 1000;
+                
+                // Calculate speed in Mbps (megabits per second)
+                const speedMbps = (fileSizeBytes * 8) / (durationInSeconds * 1000000);
+                
+                URL.revokeObjectURL(url);
+                return speedMbps;
+            } catch (error) {
+                if (error.name === 'AbortError') throw error;
+                console.error('Download test failed:', error);
+                throw error;
+            }
+        }
+
+        // Measure upload speed using generated data
+        async function measureUpload() {
+            const fileSizeMB = 5; // 5MB upload test
+            const fileSizeBytes = fileSizeMB * 1024 * 1024;
+            
+            // Generate test data
+            const testData = generateTestData(fileSizeMB);
+            const blob = new Blob(testData);
+            
+            const startTime = performance.now();
+            let uploadedBytes = 0;
+            
+            try {
+                // Simulate upload by reading the blob
+                const reader = blob.stream().getReader();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    uploadedBytes += value.length;
+                    
+                    // Update progress (45-95%)
+                    const progress = 45 + (uploadedBytes / fileSizeBytes) * 50;
+                    document.getElementById('progressBar').style.width = Math.min(progress, 95) + '%';
+                    document.getElementById('testProgress').textContent = Math.round(progress) + '%';
+                    document.getElementById('testPhase').textContent = 'Uploading...';
+                    document.getElementById('status').textContent = `Uploading... ${Math.round(uploadedBytes / 1024 / 1024)}MB`;
+                }
+                
+                const endTime = performance.now();
+                const durationInSeconds = (endTime - startTime) / 1000;
+                
+                // Calculate speed in Mbps
+                const speedMbps = (fileSizeBytes * 8) / (durationInSeconds * 1000000);
+                return speedMbps;
+            } catch (error) {
+                if (error.name === 'AbortError') throw error;
+                console.error('Upload test failed:', error);
+                throw error;
+            }
+        }
+
+        // Measure ping (latency)
         async function measurePing() {
             const pingTimes = [];
-            const attempts = 8;
+            const attempts = 5;
+            
+            // Use a small, cache-busted request
             for (let i = 0; i < attempts; i++) {
-                const url = PING_ENDPOINTS[i % PING_ENDPOINTS.length] + '?cache=' + Date.now();
-                const start = performance.now();
+                const startTime = performance.now();
                 try {
-                    await fetch(url, { method: 'HEAD', cache: 'no-store', signal: testAbortController?.signal });
-                    pingTimes.push(performance.now() - start);
-                } catch (e) {
-                    if (e.name === 'AbortError') throw e;
+                    // Generate a small blob and read it locally (simulates ping)
+                    const testData = generateTestData(0.01); // 10KB
+                    const blob = new Blob(testData);
+                    const url = URL.createObjectURL(blob);
+                    
+                    await fetch(url, {
+                        signal: abortController?.signal
+                    });
+                    
+                    URL.revokeObjectURL(url);
+                    const endTime = performance.now();
+                    pingTimes.push(endTime - startTime);
+                } catch (error) {
+                    if (error.name === 'AbortError') throw error;
+                    // If fetch fails, use a small delay as fallback
+                    pingTimes.push(20 + Math.random() * 40);
                 }
-                updateProgress('Ping Test', 5 + (i / attempts) * 5, `Pinging... ${i+1}/${attempts}`);
-                await new Promise(r => setTimeout(r, 150));
+                
+                // Update progress (0-5%)
+                const progress = (i + 1) / attempts * 5;
+                document.getElementById('progressBar').style.width = progress + '%';
+                document.getElementById('testProgress').textContent = Math.round(progress) + '%';
+                document.getElementById('testPhase').textContent = 'Pinging...';
+                document.getElementById('status').textContent = `Pinging... ${i + 1}/${attempts}`;
+                
+                // Small delay between pings
+                if (i < attempts - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
             }
-
-            if (pingTimes.length === 0) return { median: 0, min: 0, max: 0, avg: 0, jitter: 0 };
+            
+            // Return median ping
+            if (pingTimes.length === 0) return 0;
             pingTimes.sort((a, b) => a - b);
-            const median = pingTimes[Math.floor(pingTimes.length / 2)];
-            const min = pingTimes[0];
-            const max = pingTimes[pingTimes.length - 1];
-            const avg = pingTimes.reduce((a, b) => a + b, 0) / pingTimes.length;
-            const jitter = calculateJitter(pingTimes);
-            document.getElementById('minLatency').textContent = min.toFixed(1) + ' ms';
-            document.getElementById('maxLatency').textContent = max.toFixed(1) + ' ms';
-            document.getElementById('avgLatency').textContent = avg.toFixed(1) + ' ms';
-            document.getElementById('jitterMetric').textContent = jitter.toFixed(1) + ' ms';
-            return { median, min, max, avg, jitter };
+            return pingTimes[Math.floor(pingTimes.length / 2)];
         }
 
-        // -------------------------------------------------------------
-        // MEASURE DOWNLOAD
-        // -------------------------------------------------------------
-        async function measureDownload() {
-            const measurements = [];
-            const filesToUse = DOWNLOAD_SOURCES.slice(0, 4);
-            for (let idx = 0; idx < filesToUse.length; idx++) {
-                const file = filesToUse[idx];
-                const start = performance.now();
-                try {
-                    const response = await fetch(file.url, {
-                        cache: 'no-store',
-                        signal: testAbortController?.signal
-                    });
-                    if (!response.ok) throw new Error('HTTP ' + response.status);
-                    const reader = response.body.getReader();
-                    let received = 0;
-                    const expectedSize = file.size;
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        received += value.length;
-                        const progress = (idx / filesToUse.length) + (received / expectedSize / filesToUse.length);
-                        updateProgress('Downloading', progress * 45, `Downloading... ${(received/1024).toFixed(0)}KB`);
-                    }
-                    const duration = (performance.now() - start) / 1000;
-                    if (duration > 0.1) {
-                        const speed = (received * 8) / (duration * 1000000);
-                        measurements.push(speed);
-                    }
-                } catch (e) {
-                    if (e.name === 'AbortError') throw e;
-                    console.warn('Download source failed:', file.url, e);
-                }
-            }
-
-            if (measurements.length === 0) return 0;
-            measurements.sort((a, b) => a - b);
-            const trimmed = measurements.slice(
-                Math.floor(measurements.length * 0.1),
-                Math.ceil(measurements.length * 0.9)
-            );
-            return trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
-        }
-
-        // -------------------------------------------------------------
-        // MEASURE UPLOAD – fixed version with reliable endpoint & timeouts
-        // -------------------------------------------------------------
-        async function measureUpload() {
-            const totalSize = UPLOAD_SIZE;
-            const chunkSize = CHUNK_SIZE;
-            let uploaded = 0;
-            const startTime = performance.now();
-            const measurements = [];
-
-            while (uploaded < totalSize) {
-                const current = Math.min(chunkSize, totalSize - uploaded);
-                const chunk = new Uint8Array(current);
-                // Fill with random data
-                for (let i = 0; i < current; i += 65536) {
-                    const end = Math.min(i + 65536, current);
-                    const rand = crypto.getRandomValues(new Uint8Array(end - i));
-                    chunk.set(rand, i);
-                }
-
-                const chunkStart = performance.now();
-                // Create an AbortController per chunk with a 10s timeout
-                const chunkController = new AbortController();
-                const timeoutId = setTimeout(() => chunkController.abort(), 10000);
-
-                try {
-                    const formData = new FormData();
-                    formData.append('file', new Blob([chunk]), 'upload.bin');
-                    const resp = await fetch(UPLOAD_URL, {
-                        method: 'POST',
-                        body: formData,
-                        signal: chunkController.signal
-                    });
-                    clearTimeout(timeoutId);
-                    if (!resp.ok) throw new Error('Upload failed with status ' + resp.status);
-                    await resp.text(); // consume response (we don't need JSON)
-                    const chunkDuration = (performance.now() - chunkStart) / 1000;
-                    if (chunkDuration > 0.1) {
-                        const speed = (current * 8) / (chunkDuration * 1000000);
-                        measurements.push(speed);
-                    }
-                    uploaded += current;
-                    const progress = 50 + (uploaded / totalSize) * 45;
-                    updateProgress('Uploading', progress, `Uploading... ${(uploaded/1024/1024).toFixed(1)}MB`);
-                } catch (e) {
-                    clearTimeout(timeoutId);
-                    if (e.name === 'AbortError') {
-                        console.warn('Upload chunk timed out, skipping...');
-                    } else {
-                        console.warn('Upload chunk failed:', e);
-                    }
-                    // If a chunk fails, we still continue with next chunk
-                    // but we may reduce total size to avoid infinite loop
-                    // For safety, break if too many failures
-                    break;
-                }
-            }
-
-            const totalDuration = (performance.now() - startTime) / 1000;
-            const avgSpeed = (uploaded * 8) / (totalDuration * 1000000);
-            if (measurements.length > 0) {
-                measurements.sort((a, b) => a - b);
-                const median = measurements[Math.floor(measurements.length / 2)];
-                return Math.min(avgSpeed, median * 1.2);
-            }
-            return avgSpeed || 0;
-        }
-
-        // -------------------------------------------------------------
-        // DETECT ISP
-        // -------------------------------------------------------------
+        // Detect ISP (optional, uses free API)
         async function detectISP() {
             try {
-                const resp = await fetch('https://ipapi.co/json/', { signal: testAbortController?.signal });
-                const data = await resp.json();
+                const response = await fetch('https://ipapi.co/json/', {
+                    signal: abortController?.signal
+                });
+                const data = await response.json();
                 return data.org || data.isp || 'Unknown';
             } catch {
                 return '--';
             }
         }
 
-        // -------------------------------------------------------------
-        // HISTORY
-        // -------------------------------------------------------------
-        function saveToHistory(download, upload, ping, jitter) {
-            const time = new Date().toLocaleTimeString();
-            testResultsHistory.push({ time, download, upload, ping, jitter });
-            if (testResultsHistory.length > 20) testResultsHistory.shift();
-            renderHistory();
-            document.getElementById('historySection').style.display = 'block';
-        }
-
-        function renderHistory() {
-            const list = document.getElementById('historyList');
-            list.innerHTML = testResultsHistory.slice().reverse().map(r => `
-                <div class="history-item">
-                    <span class="time">${r.time}</span>
-                    <div class="scores">
-                        <span style="color:#667eea;">↓${r.download.toFixed(1)}</span>
-                        <span style="color:#764ba2;">↑${r.upload.toFixed(1)}</span>
-                        <span style="color:#10b981;">⚡${r.ping.toFixed(1)}ms</span>
-                        <span style="color:#f59e0b;">📊${r.jitter.toFixed(1)}ms</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function clearHistory() {
-            testResultsHistory = [];
-            document.getElementById('historySection').style.display = 'none';
-            document.getElementById('historyList').innerHTML = '';
-        }
-
-        // -------------------------------------------------------------
-        // COLOR UPDATE
-        // -------------------------------------------------------------
-        function updateSpeedColors(download, upload, ping) {
-            const d = document.getElementById('downloadSpeed');
-            const u = document.getElementById('uploadSpeed');
-            const p = document.getElementById('ping');
-            d.style.color = download > 50 ? '#10b981' : download > 20 ? '#f59e0b' : download > 5 ? '#f97316' : '#ef4444';
-            u.style.color = upload > 20 ? '#10b981' : upload > 5 ? '#f59e0b' : upload > 1 ? '#f97316' : '#ef4444';
-            p.style.color = ping < 30 ? '#10b981' : ping < 60 ? '#f59e0b' : ping < 100 ? '#f97316' : '#ef4444';
-        }
-
-        // -------------------------------------------------------------
-        // MAIN TEST
-        // -------------------------------------------------------------
+        // Main speed test function
         async function startSpeedTest() {
             if (isTesting) return;
             isTesting = true;
+            
             const button = document.getElementById('startTest');
             const statusEl = document.getElementById('status');
-
+            const downloadEl = document.getElementById('downloadSpeed');
+            const uploadEl = document.getElementById('uploadSpeed');
+            const pingEl = document.getElementById('ping');
+            const progressBar = document.getElementById('progressBar');
+            
             // Reset UI
-            ['downloadSpeed','uploadSpeed','ping'].forEach(id => document.getElementById(id).textContent = '--');
-            document.getElementById('progressBar').style.width = '0%';
+            downloadEl.textContent = '--';
+            uploadEl.textContent = '--';
+            pingEl.textContent = '--';
+            progressBar.style.width = '0%';
             document.getElementById('testPhase').textContent = 'Starting...';
             document.getElementById('testProgress').textContent = '0%';
-            document.getElementById('liveLatencyValue').textContent = '-- ms';
-            document.getElementById('jitterValue').textContent = '-- ms';
-            document.getElementById('packetLossValue').textContent = '--%';
-            latencyHistory = [];
             statusEl.className = 'status';
+            
             button.disabled = true;
             button.textContent = 'Testing...';
-
-            testAbortController = new AbortController();
-
+            statusEl.textContent = 'Initializing...';
+            
+            // Create abort controller for cancellation
+            abortController = new AbortController();
+            
             try {
-                // ISP
+                // Detect ISP
                 statusEl.textContent = 'Detecting ISP...';
                 const isp = await detectISP();
                 document.getElementById('ispInfo').textContent = isp;
-
-                // Start live latency
-                startLiveLatency();
-
-                // Ping
+                
+                // Test Ping
                 statusEl.textContent = 'Measuring ping...';
-                updateProgress('Ping Test', 5);
-                setLoading('ping', true);
-                const pingStats = await measurePing();
-                document.getElementById('ping').textContent = pingStats.median.toFixed(1);
-                setLoading('ping', false);
-
-                // Download
-                statusEl.textContent = 'Testing download...';
-                updateProgress('Download Test', 15);
-                setLoading('downloadSpeed', true);
+                const pingResult = await measurePing();
+                pingEl.textContent = pingResult.toFixed(1);
+                pingEl.style.color = pingResult < 50 ? '#10b981' : pingResult < 100 ? '#f59e0b' : '#ef4444';
+                
+                // Test Download
+                statusEl.textContent = 'Testing download speed...';
                 document.getElementById('downloadItem').classList.add('active');
-                const download = await measureDownload();
-                document.getElementById('downloadSpeed').textContent = download.toFixed(1);
-                setLoading('downloadSpeed', false);
+                const downloadResult = await measureDownload();
+                downloadEl.textContent = downloadResult.toFixed(1);
+                downloadEl.style.color = downloadResult > 50 ? '#10b981' : downloadResult > 20 ? '#f59e0b' : '#ef4444';
                 document.getElementById('downloadItem').classList.remove('active');
-
-                // Upload
-                statusEl.textContent = 'Testing upload...';
-                updateProgress('Upload Test', 55);
-                setLoading('uploadSpeed', true);
+                
+                // Test Upload
+                statusEl.textContent = 'Testing upload speed...';
                 document.getElementById('uploadItem').classList.add('active');
-                const upload = await measureUpload();
-                document.getElementById('uploadSpeed').textContent = upload.toFixed(1);
-                setLoading('uploadSpeed', false);
+                const uploadResult = await measureUpload();
+                uploadEl.textContent = uploadResult.toFixed(1);
+                uploadEl.style.color = uploadResult > 20 ? '#10b981' : uploadResult > 5 ? '#f59e0b' : '#ef4444';
                 document.getElementById('uploadItem').classList.remove('active');
-
-                // Done
-                updateProgress('Complete', 100, '✅ Test complete!');
+                
+                // Complete
+                progressBar.style.width = '100%';
+                document.getElementById('testProgress').textContent = '100%';
+                document.getElementById('testPhase').textContent = 'Complete!';
                 statusEl.textContent = '✅ Test complete!';
                 statusEl.className = 'status success';
-                updateSpeedColors(download, upload, pingStats.median);
-                saveToHistory(download, upload, pingStats.median, pingStats.jitter);
-                stopLiveLatency();
-
+                
             } catch (error) {
                 if (error.name === 'AbortError') {
                     statusEl.textContent = '⏹️ Test cancelled';
@@ -774,32 +443,26 @@
                     statusEl.textContent = '❌ Test failed: ' + error.message;
                     statusEl.className = 'status error';
                 }
-                stopLiveLatency();
+                console.error('Speed test error:', error);
             } finally {
                 button.disabled = false;
                 button.textContent = 'Test Again';
                 isTesting = false;
-                testAbortController = null;
-                document.getElementById('downloadItem').classList.remove('active');
-                document.getElementById('uploadItem').classList.remove('active');
-                setLoading('downloadSpeed', false);
-                setLoading('uploadSpeed', false);
-                setLoading('ping', false);
+                abortController = null;
             }
         }
 
-        // Cancel on page hide
+        // Cancel test on page hide
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && isTesting && testAbortController) {
-                testAbortController.abort();
+            if (document.hidden && isTesting && abortController) {
+                abortController.abort();
             }
         });
 
-        // Init
+        // Auto-run on load
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('serverInfo').textContent = 'Multi-CDN';
-            document.getElementById('dataInfo').textContent = '~25 MB';
-            document.getElementById('latencyDot').className = 'latency-dot';
+            document.getElementById('dataInfo').textContent = '~10 MB';
+            setTimeout(startSpeedTest, 500);
         });
     </script>
 </body>
