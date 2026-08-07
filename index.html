@@ -147,7 +147,7 @@
 
     <script>
         // ============================================================
-        // REAL SPEED TEST - Working upload with multiple endpoints
+        // SPEED TEST - Working upload using FileReader + Blob approach
         // ============================================================
         
         let isTesting = false;
@@ -182,11 +182,9 @@
             }
         ];
 
-        // UPLOAD endpoints - multiple options for redundancy
-        const UPLOAD_ENDPOINTS = [
-            'https://httpbin.org/post',           // Reliable, CORS-enabled
-            'https://postman-echo.com/post',      // Backup
-        ];
+        // UPLOAD - Working endpoint (httpbin.org with CORS support)
+        const UPLOAD_URL = 'https://httpbin.org/post';
+        const UPLOAD_SIZE = 2 * 1024 * 1024; // 2MB
 
         // Ping test endpoints
         const PING_URLS = [
@@ -274,6 +272,7 @@
                     
                     const reader = response.body.getReader();
                     let received = 0;
+                    const contentLength = parseInt(response.headers.get('content-length')) || file.size;
                     
                     while (true) {
                         const { done, value } = await reader.read();
@@ -281,7 +280,7 @@
                         received += value.length;
                         
                         const baseProgress = 10 + (i / TEST_FILES.length) * 50;
-                        const fileProgress = (received / file.size) * 50 / TEST_FILES.length;
+                        const fileProgress = (received / contentLength) * 50 / TEST_FILES.length;
                         const progress = baseProgress + fileProgress;
                         
                         updateProgress(
@@ -314,80 +313,76 @@
         }
 
         // ============================================================
-        // MEASURE UPLOAD - FIXED with multiple endpoints
+        // MEASURE UPLOAD - Using httpbin.org with proper CORS
         // ============================================================
         async function measureUpload() {
-            const chunkSize = 256 * 1024; // 256KB chunks (smaller for reliability)
-            const totalSize = 2 * 1024 * 1024; // 2MB total
+            const chunkSize = 256 * 1024; // 256KB chunks
+            const totalSize = UPLOAD_SIZE;
             let uploaded = 0;
             const speeds = [];
             const startTime = performance.now();
             
-            // Try each upload endpoint until one works
-            for (const endpoint of UPLOAD_ENDPOINTS) {
+            while (uploaded < totalSize) {
+                const currentSize = Math.min(chunkSize, totalSize - uploaded);
+                
+                // Generate random data
+                const data = new Uint8Array(currentSize);
+                for (let i = 0; i < currentSize; i += 65536) {
+                    const end = Math.min(i + 65536, currentSize);
+                    const rand = crypto.getRandomValues(new Uint8Array(end - i));
+                    data.set(rand, i);
+                }
+                
+                const chunkStart = performance.now();
+                
                 try {
-                    // Test if endpoint works
-                    const testForm = new FormData();
-                    testForm.append('test', 'ping');
-                    const testResp = await fetch(endpoint, {
+                    // Create FormData
+                    const formData = new FormData();
+                    const blob = new Blob([data]);
+                    formData.append('file', blob, 'upload.bin');
+                    
+                    // Send with a timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000);
+                    
+                    const response = await fetch(UPLOAD_URL, {
                         method: 'POST',
-                        body: testForm,
-                        signal: abortController?.signal
+                        body: formData,
+                        signal: controller.signal
                     });
-                    if (!testResp.ok) continue;
                     
-                    console.log(`Using upload endpoint: ${endpoint}`);
+                    clearTimeout(timeoutId);
                     
-                    // Upload chunks
-                    while (uploaded < totalSize) {
-                        const currentSize = Math.min(chunkSize, totalSize - uploaded);
-                        const data = new Uint8Array(currentSize);
-                        for (let i = 0; i < currentSize; i += 65536) {
-                            const end = Math.min(i + 65536, currentSize);
-                            const rand = crypto.getRandomValues(new Uint8Array(end - i));
-                            data.set(rand, i);
-                        }
-                        
-                        const chunkStart = performance.now();
-                        const formData = new FormData();
-                        formData.append('file', new Blob([data]), 'upload.bin');
-                        
-                        const response = await fetch(endpoint, {
-                            method: 'POST',
-                            body: formData,
-                            signal: abortController?.signal
-                        });
-                        
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                        await response.text(); // Consume response
-                        
-                        const chunkDuration = (performance.now() - chunkStart) / 1000;
-                        if (chunkDuration > 0.05) {
-                            const speed = (currentSize * 8) / (chunkDuration * 1000000);
-                            speeds.push(speed);
-                        }
-                        
-                        uploaded += currentSize;
-                        
-                        // Update progress (60-95%)
-                        const progress = 60 + (uploaded / totalSize) * 35;
-                        updateProgress(
-                            'Uploading...', 
-                            progress, 
-                            `Uploading... ${(uploaded/1024/1024).toFixed(2)}MB`
-                        );
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
                     }
                     
-                    // If we got here, upload succeeded
-                    break;
+                    // Read response to complete the request
+                    await response.text();
+                    
+                    const chunkDuration = (performance.now() - chunkStart) / 1000;
+                    if (chunkDuration > 0.05) {
+                        const speed = (currentSize * 8) / (chunkDuration * 1000000);
+                        speeds.push(speed);
+                    }
+                    
+                    uploaded += currentSize;
+                    
+                    // Update progress (60-95%)
+                    const progress = 60 + (uploaded / totalSize) * 35;
+                    updateProgress(
+                        'Uploading...', 
+                        progress, 
+                        `Uploading... ${(uploaded/1024/1024).toFixed(2)}MB`
+                    );
                     
                 } catch (e) {
-                    if (e.name === 'AbortError') throw e;
-                    console.warn(`Upload endpoint ${endpoint} failed:`, e);
-                    // Reset uploaded for next endpoint
-                    uploaded = 0;
-                    speeds.length = 0;
-                    continue;
+                    if (e.name === 'AbortError') {
+                        console.warn('Upload chunk timed out');
+                        break;
+                    }
+                    console.warn('Upload chunk failed:', e);
+                    break;
                 }
             }
 
