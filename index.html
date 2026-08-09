@@ -132,7 +132,7 @@
         <div class="status" id="status">Click "Start Test" to begin</div>
 
         <div class="note" id="uploadNote">
-            💡 <strong>Upload Test:</strong> Using real data sent to a working endpoint.
+            💡 <strong>Upload Test:</strong> Using real data sent to a Cloudflare Worker endpoint.
         </div>
 
         <div class="info">
@@ -299,223 +299,96 @@
         }
 
         // ============================================================
-        // MEASURE UPLOAD - USING RELIABLE METHOD
+        // UPLOAD TEST - CLOUDFLARE WORKER
         // ============================================================
-        async function measureUpload() {
-            // Use a reliable CORS-enabled endpoint
-            // We'll send data in chunks and measure speed
-            
-            const endpoints = [
-                https://speed-test.aayushadhikari609.workers.dev/'
-            ];
-            
-            let workingEndpoint = null;
-            
-            // Find a working endpoint
-            for (const endpoint of endpoints) {
-                try {
-                    const testData = new FormData();
-                    testData.append('test', 'ping');
-                    
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 3000);
-                    
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        body: testData,
-                        signal: controller.signal
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    
-                    if (response.ok) {
-                        workingEndpoint = endpoint;
-                        console.log(`✅ Using upload endpoint: ${endpoint}`);
-                        break;
-                    }
-                } catch (e) {
-                    console.log(`❌ Endpoint ${endpoint} failed:`, e.message);
-                }
-            }
-            
-            if (!workingEndpoint) {
-                // If no endpoint works, use a different approach
-                console.log('⚠️ No endpoint works, using alternative method');
-                return await measureUploadAlternative();
-            }
-            
-            // Upload test using the working endpoint
-            const totalSize = 2 * 1024 * 1024; // 2MB
-            const chunkSize = 256 * 1024; // 256KB chunks
-            let uploaded = 0;
-            const speeds = [];
-            const startTime = performance.now();
-            
-            while (uploaded < totalSize) {
-                const currentSize = Math.min(chunkSize, totalSize - uploaded);
-                
-                // Generate random data
-                const data = new Uint8Array(currentSize);
-                for (let i = 0; i < currentSize; i += 65536) {
-                    const end = Math.min(i + 65536, currentSize);
-                    const rand = crypto.getRandomValues(new Uint8Array(end - i));
-                    data.set(rand, i);
-                }
-                
-                const chunkStart = performance.now();
-                
-                try {
-                    const formData = new FormData();
-                    formData.append('file', new Blob([data]), 'upload.bin');
-                    
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000);
-                    
-                    const response = await fetch(workingEndpoint, {
-                        method: 'POST',
-                        body: formData,
-                        signal: controller.signal
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-                    
-                    // Consume response
-                    await response.text();
-                    
-                    const chunkDuration = (performance.now() - chunkStart) / 1000;
-                    if (chunkDuration > 0.05) {
-                        const speed = (currentSize * 8) / (chunkDuration * 1000000);
-                        speeds.push(speed);
-                    }
-                    
-                    uploaded += currentSize;
-                    
-                    const progress = 60 + (uploaded / totalSize) * 35;
-                    updateProgress(
-                        'Uploading...', 
-                        progress, 
-                        `Uploading... ${(uploaded/1024/1024).toFixed(2)}MB`
-                    );
-                    
-                } catch (e) {
-                    if (e.name === 'AbortError') {
-                        console.warn('Upload chunk timed out');
-                        break;
-                    }
-                    console.warn('Upload chunk failed:', e);
-                    break;
-                }
-            }
-            
-            const totalDuration = (performance.now() - startTime) / 1000;
-            const avgSpeed = (uploaded * 8) / (totalDuration * 1000000);
-            
-            if (speeds.length > 0) {
-                speeds.sort((a, b) => a - b);
-                const median = speeds[Math.floor(speeds.length / 2)];
-                return Math.min(avgSpeed, median * 1.2);
-            }
-            
-            return avgSpeed || 0;
-        }
+        // Deploy the Worker shown below, then paste its URL here.
+        // Example: https://speedtest-upload.your-subdomain.workers.dev
+        const UPLOAD_ENDPOINT = 'https://speed-test.aayushadhikari609.workers.dev/';
 
-        // ============================================================
-        // ALTERNATIVE UPLOAD METHOD - Using a different approach
-        // ============================================================
-        async function measureUploadAlternative() {
-            console.log('🔄 Using alternative upload method');
-            
-            // Use a known working technique: send data as JSON
-            const totalSize = 1 * 1024 * 1024; // 1MB
-            const chunkSize = 128 * 1024; // 128KB chunks
+        async function measureUpload() {
+            if (!UPLOAD_ENDPOINT || UPLOAD_ENDPOINT.includes('https://speed-test.aayushadhikari609.workers.dev/')) {
+                throw new Error('Upload endpoint is not configured');
+            }
+
+            // 4 MB total upload, split into 512 KB requests.
+            // Multiple samples make the result more stable.
+            const totalSize = 4 * 1024 * 1024;
+            const chunkSize = 512 * 1024;
             let uploaded = 0;
             const speeds = [];
-            const startTime = performance.now();
-            
+            const testStart = performance.now();
+
             while (uploaded < totalSize) {
                 const currentSize = Math.min(chunkSize, totalSize - uploaded);
-                
-                // Generate random data as base64 string
+
+                // Random data prevents compression from artificially
+                // increasing the reported upload speed.
                 const data = new Uint8Array(currentSize);
-                for (let i = 0; i < currentSize; i += 65536) {
-                    const end = Math.min(i + 65536, currentSize);
-                    const rand = crypto.getRandomValues(new Uint8Array(end - i));
-                    data.set(rand, i);
+                const randomChunk = 65536;
+
+                for (let offset = 0; offset < currentSize; offset += randomChunk) {
+                    const length = Math.min(randomChunk, currentSize - offset);
+                    crypto.getRandomValues(data.subarray(offset, offset + length));
                 }
-                
-                // Convert to base64 for JSON transmission
-                let base64 = '';
-                const chunk = data.slice(0, Math.min(1024, data.length));
-                const binary = String.fromCharCode.apply(null, chunk);
-                base64 = btoa(binary);
-                
+
                 const chunkStart = performance.now();
-                
+
                 try {
-                    const payload = {
-                        data: base64,
-                        size: currentSize
-                    };
-                    
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000);
-                    
-                    const response = await fetch('https://httpbin.org/post', {
+                    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+                    const response = await fetch(UPLOAD_ENDPOINT, {
                         method: 'POST',
+                        body: data,
+                        cache: 'no-store',
                         headers: {
-                            'Content-Type': 'application/json',
+                            'Content-Type': 'application/octet-stream',
+                            'Cache-Control': 'no-cache'
                         },
-                        body: JSON.stringify(payload),
                         signal: controller.signal
                     });
-                    
+
                     clearTimeout(timeoutId);
-                    
+
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
+                        throw new Error(`Upload endpoint returned HTTP ${response.status}`);
                     }
-                    
-                    await response.json();
-                    
+
                     const chunkDuration = (performance.now() - chunkStart) / 1000;
-                    if (chunkDuration > 0.05) {
-                        const speed = (currentSize * 8) / (chunkDuration * 1000000);
-                        speeds.push(speed);
+
+                    if (chunkDuration > 0) {
+                        speeds.push((currentSize * 8) / (chunkDuration * 1000000));
                     }
-                    
+
                     uploaded += currentSize;
-                    
+
                     const progress = 60 + (uploaded / totalSize) * 35;
                     updateProgress(
-                        'Uploading...', 
-                        progress, 
-                        `Uploading... ${(uploaded/1024/1024).toFixed(2)}MB`
+                        'Uploading...',
+                        progress,
+                        `Uploading... ${(uploaded / 1024 / 1024).toFixed(2)} MB`
                     );
-                    
-                } catch (e) {
-                    if (e.name === 'AbortError') {
-                        console.warn('Upload chunk timed out');
-                        break;
+
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        throw new Error('Upload request timed out');
                     }
-                    console.warn('Upload chunk failed:', e);
-                    break;
+                    throw error;
                 }
             }
-            
-            const totalDuration = (performance.now() - startTime) / 1000;
-            const avgSpeed = (uploaded * 8) / (totalDuration * 1000000);
-            
-            if (speeds.length > 0) {
-                speeds.sort((a, b) => a - b);
-                const median = speeds[Math.floor(speeds.length / 2)];
-                return Math.min(avgSpeed, median * 1.2);
-            }
-            
-            return avgSpeed || 0;
+
+            const totalDuration = (performance.now() - testStart) / 1000;
+            const overallSpeed = (totalSize * 8) / (totalDuration * 1000000);
+
+            if (!speeds.length) return 0;
+
+            // Median of individual request speeds.
+            speeds.sort((a, b) => a - b);
+            const median = speeds[Math.floor(speeds.length / 2)];
+
+            // Blend the overall transfer rate with the median sample.
+            // This avoids one unusually fast/slow request dominating.
+            return Math.max(0, Math.min(overallSpeed, median * 1.25));
         }
 
         // ============================================================
@@ -557,7 +430,7 @@
             statusEl.textContent = 'Initializing...';
             
             uploadNote.className = 'note';
-            uploadNote.innerHTML = '⏳ Testing upload methods...';
+            uploadNote.innerHTML = '⏳ Preparing upload test...';
             
             abortController = new AbortController();
             
@@ -643,8 +516,8 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('dataInfo').textContent = '~15 MB';
-            setTimeout(startSpeedTest, 1000);
+            document.getElementById('dataInfo').textContent = '~19 MB';
+            // Test starts when the user clicks "Start Test".
         });
     </script>
 </body>
