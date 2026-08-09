@@ -130,6 +130,7 @@
         <button id="startTest" onclick="startSpeedTest()">Start Test</button>
 
         <div class="status" id="status">Click "Start Test" to begin</div>
+        <div class="status" id="jitterInfo" style="font-size:0.8em;margin-top:4px;">Jitter: -- ms</div>
 
         <div class="note" id="uploadNote">
             💡 <strong>Upload Test:</strong> Using multiple upload connections to a Cloudflare Worker.
@@ -186,265 +187,307 @@
         }
 
         // ============================================================
-        // MEASURE PING
+        // MEASURE PING + JITTER
         // ============================================================
         async function measurePing() {
-            const pingTimes = [];
-            const attempts = 6;
-            
+            const samples = [];
+            const attempts = 12;
+
             for (let i = 0; i < attempts; i++) {
-                const url = PING_URLS[i % PING_URLS.length] + '?cache=' + Date.now() + Math.random();
+                const url = PING_URLS[i % PING_URLS.length] +
+                    '?cache=' + Date.now() + Math.random();
+
                 const start = performance.now();
+
                 try {
-                    await fetch(url, { 
-                        method: 'HEAD', 
+                    await fetch(url, {
+                        method: 'HEAD',
                         cache: 'no-store',
-                        signal: abortController?.signal 
+                        signal: abortController?.signal
                     });
+
                     const latency = performance.now() - start;
-                    if (latency < 1000) {
-                        pingTimes.push(latency);
-                    }
+                    if (latency > 0 && latency < 2000)
+                        samples.push(latency);
                 } catch (e) {
                     if (e.name === 'AbortError') throw e;
                 }
-                
-                const progress = ((i + 1) / attempts) * 10;
-                updateProgress('Pinging...', progress, `Ping ${i+1}/${attempts}`);
-                if (i < attempts - 1) {
-                    await new Promise(r => setTimeout(r, 150));
-                }
+
+                updateProgress(
+                    'Pinging...',
+                    ((i + 1) / attempts) * 10,
+                    `Ping ${i + 1}/${attempts}`
+                );
+
+                await new Promise(r => setTimeout(r, 80));
             }
 
-            if (pingTimes.length === 0) return 0;
-            pingTimes.sort((a, b) => a - b);
-            return Math.round((pingTimes[Math.floor(pingTimes.length / 2)]) * 10) / 10;
+            if (!samples.length)
+                return { ping: 0, jitter: 0 };
+
+            samples.sort((a, b) => a - b);
+
+            const trim = samples.length >= 8 ? 2 : 1;
+            const stable = samples.slice(
+                trim,
+                Math.max(trim + 1, samples.length - trim)
+            );
+
+            const ping = stable[Math.floor(stable.length / 2)];
+
+            let jitter = 0;
+            for (let i = 1; i < stable.length; i++)
+                jitter += Math.abs(stable[i] - stable[i - 1]);
+
+            if (stable.length > 1)
+                jitter /= stable.length - 1;
+
+            return {
+                ping: Math.round(ping * 10) / 10,
+                jitter: Math.round(jitter * 10) / 10
+            };
         }
 
         // ============================================================
-        // MEASURE DOWNLOAD - MULTI-CONNECTION CLOUDFLARE WORKER
+        // ADAPTIVE DOWNLOAD TEST
         // ============================================================
         async function measureDownload() {
-            const CONNECTIONS = 4;
-            const TEST_DURATION = 10000;
-            const WARMUP = 1500;
+            const MIN_CONNECTIONS = 4;
+            const MAX_CONNECTIONS = 8;
+            const WARMUP = 500;
+            const TEST_DURATION = 8000;
             const CHUNK_SIZE = 5 * 1024 * 1024;
-            const startTime = performance.now();
-            const measureStart = startTime + WARMUP;
-            const stopTime = startTime + TEST_DURATION;
-            let measuredBytes = 0;
-            let lastUiUpdate = 0;
 
-            const worker = async (connectionId) => {
+            const start = performance.now();
+            const warmupEnd = start + WARMUP;
+            const stopTime = warmupEnd + TEST_DURATION;
+
+            let bytes = 0;
+            let connections = MIN_CONNECTIONS;
+            let lastUI = 0;
+            let lastAdaptive = warmupEnd;
+            let lastBytes = 0;
+
+            const stream = async (id) => {
                 while (performance.now() < stopTime) {
-                    const requestStart = performance.now();
-                    const url = `${DOWNLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&measId=${Date.now()}-${connectionId}-${Math.random()}`;
+                    if (abortController?.signal.aborted)
+                        throw new DOMException('Aborted', 'AbortError');
 
                     try {
-                        const response = await fetch(url, {
-                            method: 'GET',
-                            cache: 'no-store',
-                            headers: { 'Cache-Control': 'no-cache' },
-                            signal: abortController?.signal
-                        });
+                        const response = await fetch(
+                            `${DOWNLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&t=${Date.now()}-${id}-${Math.random()}`,
+                            {
+                                cache: 'no-store',
+                                headers: {'Cache-Control': 'no-cache'},
+                                signal: abortController?.signal
+                            }
+                        );
 
-                        if (!response.ok || !response.body) {
-                            throw new Error(`Download endpoint returned HTTP ${response.status}`);
-                        }
+                        if (!response.ok || !response.body)
+                            throw new Error(`HTTP ${response.status}`);
 
                         const reader = response.body.getReader();
+
                         while (true) {
-                            const { done, value } = await reader.read();
+                            const {done, value} = await reader.read();
                             if (done) break;
 
                             const now = performance.now();
+
                             if (now >= stopTime) {
                                 await reader.cancel();
                                 return;
                             }
 
-                            if (now >= measureStart) {
-                                if (requestStart < measureStart) {
-                                    const fraction = Math.min(1, (now - measureStart) / Math.max(1, now - requestStart));
-                                    measuredBytes += value.byteLength * fraction;
-                                } else {
-                                    measuredBytes += value.byteLength;
-                                }
-                            }
-
-                            if (abortController?.signal.aborted) {
-                                await reader.cancel();
-                                return;
-                            }
+                            if (now >= warmupEnd)
+                                bytes += value.byteLength;
                         }
                     } catch (e) {
                         if (e.name === 'AbortError') throw e;
-                        console.warn(`Download connection ${connectionId} failed:`, e);
-                        await new Promise(r => setTimeout(r, 100));
+                        await new Promise(r => setTimeout(r, 50));
                     }
                 }
             };
 
-            const connections = Array.from({ length: CONNECTIONS }, (_, i) => worker(i));
+            const workers = [];
+            for (let i = 0; i < MIN_CONNECTIONS; i++)
+                workers.push(stream(i));
 
             while (performance.now() < stopTime) {
-                if (abortController?.signal.aborted) throw new DOMException('Aborted', 'AbortError');
-
                 const now = performance.now();
-                if (now - lastUiUpdate >= 250) {
-                    lastUiUpdate = now;
-                    const elapsed = Math.max(0, now - measureStart) / 1000;
-                    const measuredSeconds = (TEST_DURATION - WARMUP) / 1000;
-                    const progress = elapsed <= 0 ? 10 : 10 + Math.min(50, (elapsed / measuredSeconds) * 50);
-                    const liveMbps = elapsed > 0 ? (measuredBytes * 8) / (elapsed * 1000000) : 0;
+                const elapsed = Math.max(0, now - warmupEnd) / 1000;
 
-                    updateProgress('Downloading...', progress, liveMbps > 0 ? `Downloading... ${liveMbps.toFixed(1)} Mbps` : 'Warming up download...');
+                if (now - lastUI >= 150) {
+                    const live = elapsed > 0
+                        ? bytes * 8 / (elapsed * 1e6)
+                        : 0;
+
+                    updateProgress(
+                        'Downloading...',
+                        10 + Math.min(50, elapsed / 8 * 50),
+                        elapsed > 0
+                            ? `Downloading... ${live.toFixed(1)} Mbps • ${connections} streams`
+                            : 'Warming up download...'
+                    );
+                    lastUI = now;
                 }
 
-                await new Promise(r => setTimeout(r, 100));
+                // Add streams only when the connection is already transferring quickly.
+                if (
+                    connections < MAX_CONNECTIONS &&
+                    now - lastAdaptive >= 1000
+                ) {
+                    const intervalBytes = bytes - lastBytes;
+                    const intervalSeconds = (now - lastAdaptive) / 1000;
+                    const intervalMbps = intervalSeconds > 0
+                        ? intervalBytes * 8 / (intervalSeconds * 1e6)
+                        : 0;
+
+                    if (elapsed >= 1 && intervalMbps > 80) {
+                        workers.push(stream(connections));
+                        connections++;
+                    }
+
+                    lastBytes = bytes;
+                    lastAdaptive = now;
+                }
+
+                await new Promise(r => setTimeout(r, 50));
             }
 
-            await Promise.all(connections);
+            await Promise.all(workers);
 
-            const measuredDuration = (TEST_DURATION - WARMUP) / 1000;
-            return Math.max(0, (measuredBytes * 8) / (measuredDuration * 1000000));
+            if (bytes <= 0)
+                throw new Error('No download data was received');
+
+            return {
+                speed: bytes * 8 / (TEST_DURATION / 1000 * 1e6),
+                bytes,
+                connections
+            };
         }
 
         // ============================================================
-        // UPLOAD TEST - CLOUDFLARE WORKER (MULTI-CONNECTION)
+        // ADAPTIVE UPLOAD TEST
         // ============================================================
         const UPLOAD_ENDPOINT = 'https://speed-test.aayushadhikari609.workers.dev';
 
         async function measureUpload() {
-            if (!UPLOAD_ENDPOINT) {
-                throw new Error('Upload endpoint is not configured');
-            }
-
-            // Multiple simultaneous streams help saturate fast connections.
-            const CONNECTIONS = 4;
+            const MIN_CONNECTIONS = 4;
+            const MAX_CONNECTIONS = 8;
+            const WARMUP = 500;
             const TEST_DURATION = 8000;
             const CHUNK_SIZE = 1024 * 1024;
-            const MAX_IN_FLIGHT_PER_CONNECTION = 2;
 
-            let totalUploaded = 0;
+            let connections = MIN_CONNECTIONS;
+            let total = 0;
             let running = true;
-            let lastUIUpdate = 0;
 
-            function makeRandomData(size) {
+            function randomData(size) {
                 const data = new Uint8Array(size);
-                const block = 65536;
-
-                for (let offset = 0; offset < size; offset += block) {
-                    const length = Math.min(block, size - offset);
-                    crypto.getRandomValues(data.subarray(offset, offset + length));
+                for (let i = 0; i < size; i += 65536) {
+                    const end = Math.min(i + 65536, size);
+                    crypto.getRandomValues(data.subarray(i, end));
                 }
                 return data;
             }
 
-            async function uploadOne(data) {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), TEST_DURATION + 15000);
-
-                try {
-                    const response = await fetch(
-                        UPLOAD_ENDPOINT + '?t=' + Date.now() + Math.random(),
-                        {
-                            method: 'POST',
-                            body: data,
-                            cache: 'no-store',
-                            headers: {
-                                'Content-Type': 'application/octet-stream',
-                                'Cache-Control': 'no-cache'
-                            },
-                            signal: controller.signal
-                        }
-                    );
-
-                    if (!response.ok) {
-                        throw new Error(`Upload endpoint returned HTTP ${response.status}`);
-                    }
-
-                    return data.byteLength;
-                } finally {
-                    clearTimeout(timeout);
-                }
-            }
-
-            async function connectionLoop() {
-                const inFlight = new Set();
-
+            async function uploadLoop() {
                 while (running) {
-                    while (running && inFlight.size < MAX_IN_FLIGHT_PER_CONNECTION) {
-                        const data = makeRandomData(CHUNK_SIZE);
+                    try {
+                        const data = randomData(CHUNK_SIZE);
+                        const response = await fetch(
+                            UPLOAD_ENDPOINT + '?t=' + Date.now() + Math.random(),
+                            {
+                                method: 'POST',
+                                body: data,
+                                cache: 'no-store',
+                                headers: {
+                                    'Content-Type': 'application/octet-stream',
+                                    'Cache-Control': 'no-cache'
+                                },
+                                signal: abortController?.signal
+                            }
+                        );
 
-                        const promise = uploadOne(data)
-                            .then(bytes => {
-                                totalUploaded += bytes;
-                            })
-                            .finally(() => {
-                                inFlight.delete(promise);
-                            });
+                        if (!response.ok)
+                            throw new Error(`HTTP ${response.status}`);
 
-                        inFlight.add(promise);
-                    }
-
-                    if (inFlight.size) {
-                        await Promise.race(inFlight);
+                        total += data.byteLength;
+                    } catch (e) {
+                        if (e.name === 'AbortError') throw e;
+                        await new Promise(r => setTimeout(r, 50));
                     }
                 }
-
-                await Promise.allSettled([...inFlight]);
             }
 
-            // One-second warm-up, then an eight-second measurement window.
+            const workers = [];
+            for (let i = 0; i < MIN_CONNECTIONS; i++)
+                workers.push(uploadLoop());
+
             const warmupStart = performance.now();
-            const workers = Array.from(
-                { length: CONNECTIONS },
-                () => connectionLoop()
-            );
+            while (performance.now() - warmupStart < WARMUP)
+                await new Promise(r => setTimeout(r, 25));
 
-            while (performance.now() - warmupStart < 1000) {
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
+            const measurementStart = performance.now();
+            const startBytes = total;
+            let lastUI = 0;
+            let lastAdaptive = measurementStart;
+            let lastBytes = total;
 
-            const measuredStartBytes = totalUploaded;
-            const testStart = performance.now();
-
-            while (performance.now() - testStart < TEST_DURATION) {
-                const elapsed = (performance.now() - testStart) / 1000;
-                const bytes = totalUploaded - measuredStartBytes;
-                const liveSpeed = elapsed > 0
-                    ? (bytes * 8) / (elapsed * 1000000)
+            while (performance.now() - measurementStart < TEST_DURATION) {
+                const now = performance.now();
+                const elapsed = (now - measurementStart) / 1000;
+                const measured = total - startBytes;
+                const live = elapsed > 0
+                    ? measured * 8 / (elapsed * 1e6)
                     : 0;
 
-                const progress = 60 + Math.min(
-                    35,
-                    (elapsed / (TEST_DURATION / 1000)) * 35
-                );
-
-                if (performance.now() - lastUIUpdate > 150) {
+                if (now - lastUI >= 150) {
                     updateProgress(
                         'Uploading...',
-                        progress,
-                        `Uploading... ${liveSpeed.toFixed(1)} Mbps`
+                        60 + Math.min(35, elapsed / 8 * 35),
+                        `Uploading... ${live.toFixed(1)} Mbps • ${connections} streams`
                     );
-                    lastUIUpdate = performance.now();
+                    lastUI = now;
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 100));
+                if (
+                    connections < MAX_CONNECTIONS &&
+                    now - lastAdaptive >= 1000
+                ) {
+                    const intervalBytes = total - lastBytes;
+                    const intervalSeconds = (now - lastAdaptive) / 1000;
+                    const intervalMbps = intervalSeconds > 0
+                        ? intervalBytes * 8 / (intervalSeconds * 1e6)
+                        : 0;
+
+                    if (elapsed >= 1 && intervalMbps > 40) {
+                        workers.push(uploadLoop());
+                        connections++;
+                    }
+
+                    lastBytes = total;
+                    lastAdaptive = now;
+                }
+
+                await new Promise(r => setTimeout(r, 50));
             }
 
             running = false;
             await Promise.allSettled(workers);
 
-            const duration = (performance.now() - testStart) / 1000;
-            const measuredBytes = totalUploaded - measuredStartBytes;
+            const duration = (performance.now() - measurementStart) / 1000;
+            const measured = total - startBytes;
 
-            if (measuredBytes <= 0 || duration <= 0) {
+            if (measured <= 0)
                 throw new Error('No upload data was transferred');
-            }
 
-            return (measuredBytes * 8) / (duration * 1000000);
+            return {
+                speed: measured * 8 / (duration * 1e6),
+                bytes: measured,
+                connections
+            };
         }
 
         // ============================================================
@@ -477,6 +520,7 @@
             document.getElementById('downloadSpeed').textContent = '--';
             document.getElementById('uploadSpeed').textContent = '--';
             document.getElementById('ping').textContent = '--';
+            document.getElementById('jitterInfo').textContent = 'Jitter: -- ms';
             document.getElementById('progressBar').style.width = '0%';
             document.getElementById('testPhase').textContent = 'Starting...';
             document.getElementById('testProgress').textContent = '0%';
@@ -500,7 +544,8 @@
                 statusEl.textContent = 'Measuring ping...';
                 setLoading('ping', true);
                 const pingResult = await measurePing();
-                document.getElementById('ping').textContent = pingResult.toFixed(1);
+                document.getElementById('ping').textContent = pingResult.ping.toFixed(1);
+                document.getElementById('jitterInfo').textContent = `Jitter: ${pingResult.jitter.toFixed(1)} ms`;
                 setLoading('ping', false);
                 
                 const pingEl = document.getElementById('ping');
@@ -512,13 +557,13 @@
                 document.getElementById('downloadItem').classList.add('active');
                 setLoading('downloadSpeed', true);
                 const downloadResult = await measureDownload();
-                document.getElementById('downloadSpeed').textContent = downloadResult.toFixed(1);
+                document.getElementById('downloadSpeed').textContent = downloadResult.speed.toFixed(1);
                 setLoading('downloadSpeed', false);
                 document.getElementById('downloadItem').classList.remove('active');
                 
                 const downloadEl = document.getElementById('downloadSpeed');
-                downloadEl.style.color = downloadResult > 50 ? '#10b981' : 
-                                        downloadResult > 20 ? '#f59e0b' : '#ef4444';
+                downloadEl.style.color = downloadResult.speed > 50 ? '#10b981' : 
+                                        downloadResult.speed > 20 ? '#f59e0b' : '#ef4444';
                 
                 // Test Upload
                 statusEl.textContent = 'Testing upload speed...';
@@ -526,13 +571,13 @@
                 document.getElementById('uploadItem').classList.add('active');
                 setLoading('uploadSpeed', true);
                 const uploadResult = await measureUpload();
-                document.getElementById('uploadSpeed').textContent = uploadResult.toFixed(1);
+                document.getElementById('uploadSpeed').textContent = uploadResult.speed.toFixed(1);
                 setLoading('uploadSpeed', false);
                 document.getElementById('uploadItem').classList.remove('active');
                 
                 const uploadEl = document.getElementById('uploadSpeed');
-                uploadEl.style.color = uploadResult > 20 ? '#10b981' : 
-                                      uploadResult > 5 ? '#f59e0b' : '#ef4444';
+                uploadEl.style.color = uploadResult.speed > 20 ? '#10b981' : 
+                                      uploadResult.speed > 5 ? '#f59e0b' : '#ef4444';
                 
                 // Complete
                 updateProgress('Complete!', 100, '✅ Test complete!');
