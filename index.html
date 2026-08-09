@@ -138,7 +138,7 @@
         <div class="info">
             <span class="info-item">
                 <span class="label">Test Data:</span>
-                <span class="value" id="dataInfo">~15 MB</span>
+                <span class="value" id="dataInfo">Up to ~40+ MB</span>
             </span>
             <span class="info-item">
                 <span class="label">ISP:</span>
@@ -155,29 +155,11 @@
         let isTesting = false;
         let abortController = null;
 
-        // DOWNLOAD test files (all CORS-enabled)
-        const TEST_FILES = [
-            {
-                url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js',
-                size: 600000,
-                name: 'Three.js'
-            },
-            {
-                url: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-                size: 550000,
-                name: 'Three.js (cdnjs)'
-            },
-            {
-                url: 'https://unpkg.com/three@0.160.0/build/three.min.js',
-                size: 600000,
-                name: 'Three.js (unpkg)'
-            },
-            {
-                url: 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js',
-                size: 87000,
-                name: 'jQuery'
-            }
-        ];
+        // DOWNLOAD TEST - CLOUDFLARE SPEED TEST EDGE
+        // Uses Cloudflare's dedicated bandwidth endpoint instead of tiny
+        // JavaScript library files. Multiple streams help fast 4G/5G/Wi-Fi
+        // connections reach their available throughput.
+        const DOWNLOAD_ENDPOINT = 'https://speed.cloudflare.com/__down';
 
         // Ping test endpoints
         const PING_URLS = [
@@ -240,62 +222,115 @@
         }
 
         // ============================================================
-        // MEASURE DOWNLOAD
+        // MEASURE DOWNLOAD - MULTI-CONNECTION
         // ============================================================
         async function measureDownload() {
-            const speeds = [];
-            
-            for (let i = 0; i < TEST_FILES.length; i++) {
-                const file = TEST_FILES[i];
-                try {
-                    const start = performance.now();
-                    const response = await fetch(file.url, {
-                        cache: 'no-store',
-                        signal: abortController?.signal
-                    });
-                    
-                    if (!response.ok) continue;
-                    
-                    const reader = response.body.getReader();
-                    let received = 0;
-                    const contentLength = parseInt(response.headers.get('content-length')) || file.size;
-                    
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        received += value.length;
-                        
-                        const baseProgress = 10 + (i / TEST_FILES.length) * 50;
-                        const fileProgress = (received / contentLength) * 50 / TEST_FILES.length;
-                        const progress = baseProgress + fileProgress;
-                        
-                        updateProgress(
-                            'Downloading...', 
-                            progress, 
-                            `Downloading ${file.name}... ${(received/1024).toFixed(0)}KB`
-                        );
+            const CONNECTIONS = 4;
+            const TEST_DURATION = 10000; // 10 seconds
+            const WARMUP = 1500;          // ignore slow-start period
+            const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB per request
+            const startTime = performance.now();
+            const measureStart = startTime + WARMUP;
+            const stopTime = startTime + TEST_DURATION;
+            let measuredBytes = 0;
+            let totalBytes = 0;
+            let lastUiUpdate = 0;
+
+            const worker = async (connectionId) => {
+                while (performance.now() < stopTime) {
+                    const remaining = stopTime - performance.now();
+                    if (remaining <= 0) break;
+
+                    const url = `${DOWNLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&measId=${Date.now()}-${connectionId}-${Math.random()}`;
+                    const requestStart = performance.now();
+
+                    try {
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            cache: 'no-store',
+                            headers: { 'Cache-Control': 'no-cache' },
+                            signal: abortController?.signal
+                        });
+
+                        if (!response.ok || !response.body) {
+                            throw new Error(`Download endpoint returned HTTP ${response.status}`);
+                        }
+
+                        const reader = response.body.getReader();
+                        let requestBytes = 0;
+
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+
+                            const now = performance.now();
+                            requestBytes += value.byteLength;
+
+                            if (now >= stopTime) {
+                                await reader.cancel();
+                                return;
+                            }
+
+                            // Only count bytes received during the measured window.
+                            if (now >= measureStart) {
+                                if (requestStart < measureStart) {
+                                    const usableFraction = Math.min(
+                                        1,
+                                        (now - measureStart) / Math.max(1, now - requestStart)
+                                    );
+                                    measuredBytes += value.byteLength * usableFraction;
+                                } else {
+                                    measuredBytes += value.byteLength;
+                                }
+                            }
+
+                            if (abortController?.signal.aborted) {
+                                await reader.cancel();
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        if (e.name === 'AbortError') throw e;
+                        console.warn(`Download connection ${connectionId} failed:`, e);
                     }
-                    
-                    const duration = (performance.now() - start) / 1000;
-                    if (duration > 0.1 && received > 10000) {
-                        const speed = (received * 8) / (duration * 1000000);
-                        speeds.push(speed);
-                    }
-                    
-                } catch (e) {
-                    if (e.name === 'AbortError') throw e;
-                    console.warn(`Download failed for ${file.name}:`, e);
                 }
+            };
+
+            const connections = Array.from({ length: CONNECTIONS }, (_, i) => worker(i));
+
+            // Keep the UI responsive while the parallel streams run.
+            while (performance.now() < stopTime) {
+                if (abortController?.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+
+                const now = performance.now();
+                if (now - lastUiUpdate >= 250) {
+                    lastUiUpdate = now;
+                    const elapsed = Math.max(0, now - measureStart) / 1000;
+                    const progress = elapsed <= 0
+                        ? 10
+                        : 10 + Math.min(50, (elapsed / ((TEST_DURATION - WARMUP) / 1000)) * 50);
+                    const liveMbps = elapsed > 0
+                        ? (measuredBytes * 8) / (elapsed * 1000000)
+                        : 0;
+
+                    updateProgress(
+                        'Downloading...',
+                        progress,
+                        liveMbps > 0
+                            ? `Downloading... ${liveMbps.toFixed(1)} Mbps`
+                            : 'Warming up download...'
+                    );
+                }
+
+                await new Promise(r => setTimeout(r, 100));
             }
 
-            if (speeds.length === 0) return 0;
-            
-            speeds.sort((a, b) => a - b);
-            const start = Math.floor(speeds.length * 0.1);
-            const end = Math.ceil(speeds.length * 0.9);
-            const trimmed = speeds.slice(start, end);
-            
-            return trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
+            await Promise.all(connections);
+
+            const measuredDuration = (TEST_DURATION - WARMUP) / 1000;
+            const speed = (measuredBytes * 8) / (measuredDuration * 1000000);
+
+            return Math.max(0, speed);
         }
 
         // ============================================================
@@ -560,7 +595,7 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('dataInfo').textContent = '~30+ MB';
+            document.getElementById('dataInfo').textContent = 'Up to ~40+ MB';
             // Test starts when the user clicks "Start Test".
         });
     </script>
