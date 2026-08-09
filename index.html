@@ -159,7 +159,7 @@
         // Uses Cloudflare's dedicated bandwidth endpoint instead of tiny
         // JavaScript library files. Multiple streams help fast 4G/5G/Wi-Fi
         // connections reach their available throughput.
-        const DOWNLOAD_ENDPOINT = 'https://speed.cloudflare.com/__down';
+        const DOWNLOAD_ENDPOINT = 'https://speed-test.aayushadhikari609.workers.dev';
 
         // Ping test endpoints
         const PING_URLS = [
@@ -222,27 +222,23 @@
         }
 
         // ============================================================
-        // MEASURE DOWNLOAD - MULTI-CONNECTION
+        // MEASURE DOWNLOAD - MULTI-CONNECTION CLOUDFLARE WORKER
         // ============================================================
         async function measureDownload() {
             const CONNECTIONS = 4;
-            const TEST_DURATION = 10000; // 10 seconds
-            const WARMUP = 1500;          // ignore slow-start period
-            const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB per request
+            const TEST_DURATION = 10000;
+            const WARMUP = 1500;
+            const CHUNK_SIZE = 5 * 1024 * 1024;
             const startTime = performance.now();
             const measureStart = startTime + WARMUP;
             const stopTime = startTime + TEST_DURATION;
             let measuredBytes = 0;
-            let totalBytes = 0;
             let lastUiUpdate = 0;
 
             const worker = async (connectionId) => {
                 while (performance.now() < stopTime) {
-                    const remaining = stopTime - performance.now();
-                    if (remaining <= 0) break;
-
-                    const url = `${DOWNLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&measId=${Date.now()}-${connectionId}-${Math.random()}`;
                     const requestStart = performance.now();
+                    const url = `${DOWNLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&measId=${Date.now()}-${connectionId}-${Math.random()}`;
 
                     try {
                         const response = await fetch(url, {
@@ -257,28 +253,20 @@
                         }
 
                         const reader = response.body.getReader();
-                        let requestBytes = 0;
-
                         while (true) {
                             const { done, value } = await reader.read();
                             if (done) break;
 
                             const now = performance.now();
-                            requestBytes += value.byteLength;
-
                             if (now >= stopTime) {
                                 await reader.cancel();
                                 return;
                             }
 
-                            // Only count bytes received during the measured window.
                             if (now >= measureStart) {
                                 if (requestStart < measureStart) {
-                                    const usableFraction = Math.min(
-                                        1,
-                                        (now - measureStart) / Math.max(1, now - requestStart)
-                                    );
-                                    measuredBytes += value.byteLength * usableFraction;
+                                    const fraction = Math.min(1, (now - measureStart) / Math.max(1, now - requestStart));
+                                    measuredBytes += value.byteLength * fraction;
                                 } else {
                                     measuredBytes += value.byteLength;
                                 }
@@ -292,13 +280,13 @@
                     } catch (e) {
                         if (e.name === 'AbortError') throw e;
                         console.warn(`Download connection ${connectionId} failed:`, e);
+                        await new Promise(r => setTimeout(r, 100));
                     }
                 }
             };
 
             const connections = Array.from({ length: CONNECTIONS }, (_, i) => worker(i));
 
-            // Keep the UI responsive while the parallel streams run.
             while (performance.now() < stopTime) {
                 if (abortController?.signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
@@ -306,20 +294,11 @@
                 if (now - lastUiUpdate >= 250) {
                     lastUiUpdate = now;
                     const elapsed = Math.max(0, now - measureStart) / 1000;
-                    const progress = elapsed <= 0
-                        ? 10
-                        : 10 + Math.min(50, (elapsed / ((TEST_DURATION - WARMUP) / 1000)) * 50);
-                    const liveMbps = elapsed > 0
-                        ? (measuredBytes * 8) / (elapsed * 1000000)
-                        : 0;
+                    const measuredSeconds = (TEST_DURATION - WARMUP) / 1000;
+                    const progress = elapsed <= 0 ? 10 : 10 + Math.min(50, (elapsed / measuredSeconds) * 50);
+                    const liveMbps = elapsed > 0 ? (measuredBytes * 8) / (elapsed * 1000000) : 0;
 
-                    updateProgress(
-                        'Downloading...',
-                        progress,
-                        liveMbps > 0
-                            ? `Downloading... ${liveMbps.toFixed(1)} Mbps`
-                            : 'Warming up download...'
-                    );
+                    updateProgress('Downloading...', progress, liveMbps > 0 ? `Downloading... ${liveMbps.toFixed(1)} Mbps` : 'Warming up download...');
                 }
 
                 await new Promise(r => setTimeout(r, 100));
@@ -328,9 +307,7 @@
             await Promise.all(connections);
 
             const measuredDuration = (TEST_DURATION - WARMUP) / 1000;
-            const speed = (measuredBytes * 8) / (measuredDuration * 1000000);
-
-            return Math.max(0, speed);
+            return Math.max(0, (measuredBytes * 8) / (measuredDuration * 1000000));
         }
 
         // ============================================================
