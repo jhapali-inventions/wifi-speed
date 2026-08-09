@@ -132,7 +132,7 @@
         <div class="status" id="status">Click "Start Test" to begin</div>
 
         <div class="note" id="uploadNote">
-            💡 <strong>Upload Test:</strong> Using real data sent to a Cloudflare Worker endpoint.
+            💡 <strong>Upload Test:</strong> Using multiple upload connections to a Cloudflare Worker.
         </div>
 
         <div class="info">
@@ -299,96 +299,140 @@
         }
 
         // ============================================================
-        // UPLOAD TEST - CLOUDFLARE WORKER
+        // UPLOAD TEST - CLOUDFLARE WORKER (MULTI-CONNECTION)
         // ============================================================
-        // Deploy the Worker shown below, then paste its URL here.
-        // Example: https://speedtest-upload.your-subdomain.workers.dev
-        const UPLOAD_ENDPOINT = 'https://speed-test.aayushadhikari609.workers.dev/';
+        const UPLOAD_ENDPOINT = 'https://speed-test.aayushadhikari609.workers.dev';
 
         async function measureUpload() {
-            if (!UPLOAD_ENDPOINT || UPLOAD_ENDPOINT.includes('PASTE_YOUR')) {
+            if (!UPLOAD_ENDPOINT) {
                 throw new Error('Upload endpoint is not configured');
             }
 
-            // 4 MB total upload, split into 512 KB requests.
-            // Multiple samples make the result more stable.
-            const totalSize = 4 * 1024 * 1024;
-            const chunkSize = 512 * 1024;
-            let uploaded = 0;
-            const speeds = [];
-            const testStart = performance.now();
+            // Multiple simultaneous streams help saturate fast connections.
+            const CONNECTIONS = 4;
+            const TEST_DURATION = 8000;
+            const CHUNK_SIZE = 1024 * 1024;
+            const MAX_IN_FLIGHT_PER_CONNECTION = 2;
 
-            while (uploaded < totalSize) {
-                const currentSize = Math.min(chunkSize, totalSize - uploaded);
+            let totalUploaded = 0;
+            let running = true;
+            let lastUIUpdate = 0;
 
-                // Random data prevents compression from artificially
-                // increasing the reported upload speed.
-                const data = new Uint8Array(currentSize);
-                const randomChunk = 65536;
+            function makeRandomData(size) {
+                const data = new Uint8Array(size);
+                const block = 65536;
 
-                for (let offset = 0; offset < currentSize; offset += randomChunk) {
-                    const length = Math.min(randomChunk, currentSize - offset);
+                for (let offset = 0; offset < size; offset += block) {
+                    const length = Math.min(block, size - offset);
                     crypto.getRandomValues(data.subarray(offset, offset + length));
                 }
+                return data;
+            }
 
-                const chunkStart = performance.now();
+            async function uploadOne(data) {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), TEST_DURATION + 15000);
 
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-                    const response = await fetch(UPLOAD_ENDPOINT, {
-                        method: 'POST',
-                        body: data,
-                        cache: 'no-store',
-                        headers: {
-                            'Content-Type': 'application/octet-stream',
-                            'Cache-Control': 'no-cache'
-                        },
-                        signal: controller.signal
-                    });
-
-                    clearTimeout(timeoutId);
+                    const response = await fetch(
+                        UPLOAD_ENDPOINT + '?t=' + Date.now() + Math.random(),
+                        {
+                            method: 'POST',
+                            body: data,
+                            cache: 'no-store',
+                            headers: {
+                                'Content-Type': 'application/octet-stream',
+                                'Cache-Control': 'no-cache'
+                            },
+                            signal: controller.signal
+                        }
+                    );
 
                     if (!response.ok) {
                         throw new Error(`Upload endpoint returned HTTP ${response.status}`);
                     }
 
-                    const chunkDuration = (performance.now() - chunkStart) / 1000;
-
-                    if (chunkDuration > 0) {
-                        speeds.push((currentSize * 8) / (chunkDuration * 1000000));
-                    }
-
-                    uploaded += currentSize;
-
-                    const progress = 60 + (uploaded / totalSize) * 35;
-                    updateProgress(
-                        'Uploading...',
-                        progress,
-                        `Uploading... ${(uploaded / 1024 / 1024).toFixed(2)} MB`
-                    );
-
-                } catch (error) {
-                    if (error.name === 'AbortError') {
-                        throw new Error('Upload request timed out');
-                    }
-                    throw error;
+                    return data.byteLength;
+                } finally {
+                    clearTimeout(timeout);
                 }
             }
 
-            const totalDuration = (performance.now() - testStart) / 1000;
-            const overallSpeed = (totalSize * 8) / (totalDuration * 1000000);
+            async function connectionLoop() {
+                const inFlight = new Set();
 
-            if (!speeds.length) return 0;
+                while (running) {
+                    while (running && inFlight.size < MAX_IN_FLIGHT_PER_CONNECTION) {
+                        const data = makeRandomData(CHUNK_SIZE);
 
-            // Median of individual request speeds.
-            speeds.sort((a, b) => a - b);
-            const median = speeds[Math.floor(speeds.length / 2)];
+                        const promise = uploadOne(data)
+                            .then(bytes => {
+                                totalUploaded += bytes;
+                            })
+                            .finally(() => {
+                                inFlight.delete(promise);
+                            });
 
-            // Blend the overall transfer rate with the median sample.
-            // This avoids one unusually fast/slow request dominating.
-            return Math.max(0, Math.min(overallSpeed, median * 1.25));
+                        inFlight.add(promise);
+                    }
+
+                    if (inFlight.size) {
+                        await Promise.race(inFlight);
+                    }
+                }
+
+                await Promise.allSettled([...inFlight]);
+            }
+
+            // One-second warm-up, then an eight-second measurement window.
+            const warmupStart = performance.now();
+            const workers = Array.from(
+                { length: CONNECTIONS },
+                () => connectionLoop()
+            );
+
+            while (performance.now() - warmupStart < 1000) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            const measuredStartBytes = totalUploaded;
+            const testStart = performance.now();
+
+            while (performance.now() - testStart < TEST_DURATION) {
+                const elapsed = (performance.now() - testStart) / 1000;
+                const bytes = totalUploaded - measuredStartBytes;
+                const liveSpeed = elapsed > 0
+                    ? (bytes * 8) / (elapsed * 1000000)
+                    : 0;
+
+                const progress = 60 + Math.min(
+                    35,
+                    (elapsed / (TEST_DURATION / 1000)) * 35
+                );
+
+                if (performance.now() - lastUIUpdate > 150) {
+                    updateProgress(
+                        'Uploading...',
+                        progress,
+                        `Uploading... ${liveSpeed.toFixed(1)} Mbps`
+                    );
+                    lastUIUpdate = performance.now();
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            running = false;
+            await Promise.allSettled(workers);
+
+            const duration = (performance.now() - testStart) / 1000;
+            const measuredBytes = totalUploaded - measuredStartBytes;
+
+            if (measuredBytes <= 0 || duration <= 0) {
+                throw new Error('No upload data was transferred');
+            }
+
+            return (measuredBytes * 8) / (duration * 1000000);
         }
 
         // ============================================================
@@ -466,7 +510,7 @@
                 
                 // Test Upload
                 statusEl.textContent = 'Testing upload speed...';
-                uploadNote.innerHTML = '⏳ Uploading real data... This may take a moment.';
+                uploadNote.innerHTML = '⏳ Measuring upload with multiple connections...';
                 document.getElementById('uploadItem').classList.add('active');
                 setLoading('uploadSpeed', true);
                 const uploadResult = await measureUpload();
@@ -482,7 +526,7 @@
                 updateProgress('Complete!', 100, '✅ Test complete!');
                 statusEl.className = 'status success';
                 uploadNote.className = 'note success-note';
-                uploadNote.innerHTML = '✅ Upload test complete! Real data was sent to measure your upload speed.';
+                uploadNote.innerHTML = '✅ Upload test complete! Multiple connections were used for a more stable result.';
                 
             } catch (error) {
                 if (error.name === 'AbortError') {
@@ -516,7 +560,7 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('dataInfo').textContent = '~19 MB';
+            document.getElementById('dataInfo').textContent = '~30+ MB';
             // Test starts when the user clicks "Start Test".
         });
     </script>
