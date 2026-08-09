@@ -281,10 +281,6 @@
                             `${DOWNLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&t=${Date.now()}-${id}-${Math.random()}`,
                             {
                                 cache: 'no-store',
-                                headers: {
-                                    'Cache-Control': 'no-cache',
-                                    'Pragma': 'no-cache'
-                                },
                                 signal: abortController?.signal
                             }
                         );
@@ -450,8 +446,7 @@
                                 body: data,
                                 cache: 'no-store',
                                 headers: {
-                                    'Content-Type': 'application/octet-stream',
-                                    'Cache-Control': 'no-cache'
+                                    'Content-Type': 'application/octet-stream'
                                 },
                                 signal: abortController?.signal
                             }
@@ -614,8 +609,8 @@
                 setLoading('ping', false);
                 
                 const pingEl = document.getElementById('ping');
-                pingEl.style.color = pingResult < 50 ? '#10b981' : 
-                                     pingResult < 100 ? '#f59e0b' : '#ef4444';
+                pingEl.style.color = pingResult.ping < 50 ? '#10b981' : 
+                                     pingResult.ping < 100 ? '#f59e0b' : '#ef4444';
                 
                 // Test Download
                 statusEl.textContent = 'Testing download speed...';
