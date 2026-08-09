@@ -252,39 +252,46 @@
         // ADAPTIVE DOWNLOAD TEST
         // ============================================================
         async function measureDownload() {
-            const MIN_CONNECTIONS = 4;
-            const MAX_CONNECTIONS = 8;
             const WARMUP = 500;
+            const PROBE_DURATION = 2000;
             const TEST_DURATION = 14000;
-            const CHUNK_SIZE = 5 * 1024 * 1024;
+            const CHUNK_SIZE = 4 * 1024 * 1024;
 
-            const start = performance.now();
-            const warmupEnd = start + WARMUP;
+            // Start with only 2 streams so slower/2.4 GHz links
+            // are not overloaded by the speed test itself.
+            let connectionCount = 2;
+            let measuredBytes = 0;
+            let probeBytes = 0;
+            let running = true;
+            let lastUI = 0;
+
+            const testStart = performance.now();
+            const warmupEnd = testStart + WARMUP;
+            const probeEnd = warmupEnd + PROBE_DURATION;
             const stopTime = warmupEnd + TEST_DURATION;
 
-            let bytes = 0;
-            let connections = MIN_CONNECTIONS;
-            let lastUI = 0;
-            let lastAdaptive = warmupEnd;
-            let lastBytes = 0;
-
             const stream = async (id) => {
-                while (performance.now() < stopTime) {
-                    if (abortController?.signal.aborted)
+                while (running && performance.now() < stopTime) {
+                    if (abortController?.signal.aborted) {
                         throw new DOMException('Aborted', 'AbortError');
+                    }
 
                     try {
                         const response = await fetch(
                             `${DOWNLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&t=${Date.now()}-${id}-${Math.random()}`,
                             {
                                 cache: 'no-store',
-                                headers: {'Cache-Control': 'no-cache'},
+                                headers: {
+                                    'Cache-Control': 'no-cache',
+                                    'Pragma': 'no-cache'
+                                },
                                 signal: abortController?.signal
                             }
                         );
 
-                        if (!response.ok || !response.body)
+                        if (!response.ok || !response.body) {
                             throw new Error(`HTTP ${response.status}`);
+                        }
 
                         const reader = response.body.getReader();
 
@@ -299,91 +306,126 @@
                                 return;
                             }
 
-                            if (now >= warmupEnd)
-                                bytes += value.byteLength;
+                            if (now >= warmupEnd) {
+                                if (now < probeEnd) {
+                                    probeBytes += value.byteLength;
+                                } else {
+                                    measuredBytes += value.byteLength;
+                                }
+                            }
                         }
                     } catch (e) {
                         if (e.name === 'AbortError') throw e;
-                        await new Promise(r => setTimeout(r, 50));
+                        await new Promise(r => setTimeout(r, 80));
                     }
                 }
             };
 
-            const workers = [];
-            for (let i = 0; i < MIN_CONNECTIONS; i++)
-                workers.push(stream(i));
+            // Gentle 2-stream probe.
+            const workers = [stream(0), stream(1)];
 
-            while (performance.now() < stopTime) {
+            while (performance.now() < probeEnd) {
                 const now = performance.now();
                 const elapsed = Math.max(0, now - warmupEnd) / 1000;
 
                 if (now - lastUI >= 150) {
-                    const live = elapsed > 0
-                        ? bytes * 8 / (elapsed * 1e6)
+                    const liveMbps = elapsed > 0
+                        ? probeBytes * 8 / (elapsed * 1e6)
                         : 0;
 
                     updateProgress(
-                        'Downloading...',
-                        10 + Math.min(50, elapsed / 14 * 50),
+                        'Testing connection...',
+                        10 + Math.min(15, elapsed / 2 * 15),
                         elapsed > 0
-                            ? `Downloading... ${live.toFixed(1)} Mbps • ${connections} streams`
+                            ? `Testing connection... ${liveMbps.toFixed(1)} Mbps • 2 streams`
                             : 'Warming up download...'
                     );
                     lastUI = now;
                 }
 
-                // Add streams only when the connection is already transferring quickly.
-                if (
-                    connections < MAX_CONNECTIONS &&
-                    now - lastAdaptive >= 1000
-                ) {
-                    const intervalBytes = bytes - lastBytes;
-                    const intervalSeconds = (now - lastAdaptive) / 1000;
-                    const intervalMbps = intervalSeconds > 0
-                        ? intervalBytes * 8 / (intervalSeconds * 1e6)
+                await new Promise(r => setTimeout(r, 50));
+            }
+
+            // Choose stream count from the short probe.
+            const probeMbps =
+                probeBytes * 8 / (PROBE_DURATION / 1000 * 1e6);
+
+            if (probeMbps < 50) connectionCount = 2;
+            else if (probeMbps < 100) connectionCount = 3;
+            else if (probeMbps < 300) connectionCount = 4;
+            else if (probeMbps < 600) connectionCount = 6;
+            else connectionCount = 8;
+
+            for (let i = 2; i < connectionCount; i++) {
+                workers.push(stream(i));
+            }
+
+            // Main 14-second measurement.
+            const measurementStart = performance.now();
+
+            while (performance.now() < stopTime) {
+                const now = performance.now();
+                const elapsed = Math.max(0, now - measurementStart) / 1000;
+
+                if (now - lastUI >= 150) {
+                    const liveMbps = elapsed > 0
+                        ? measuredBytes * 8 / (elapsed * 1e6)
                         : 0;
 
-                    if (elapsed >= 1 && intervalMbps > 80) {
-                        workers.push(stream(connections));
-                        connections++;
-                    }
-
-                    lastBytes = bytes;
-                    lastAdaptive = now;
+                    updateProgress(
+                        'Downloading...',
+                        25 + Math.min(35, elapsed / 14 * 35),
+                        `Downloading... ${liveMbps.toFixed(1)} Mbps • ${connectionCount} streams`
+                    );
+                    lastUI = now;
                 }
 
                 await new Promise(r => setTimeout(r, 50));
             }
 
+            running = false;
             await Promise.all(workers);
 
-            if (bytes <= 0)
+            const duration = (performance.now() - measurementStart) / 1000;
+
+            if (measuredBytes <= 0) {
                 throw new Error('No download data was received');
+            }
 
             return {
-                speed: bytes * 8 / (TEST_DURATION / 1000 * 1e6),
-                bytes,
-                connections
+                speed: measuredBytes * 8 / (duration * 1e6),
+                bytes: measuredBytes,
+                connections: connectionCount,
+                probeMbps
             };
         }
 
         // ============================================================
         // ADAPTIVE UPLOAD TEST
         // ============================================================
-        const UPLOAD_ENDPOINT = 'https://speed-test.aayushadhikari609.workers.dev';
+        const UPLOAD_ENDPOINT =
+            'https://speed-test.aayushadhikari609.workers.dev';
 
         async function measureUpload() {
-            const MIN_CONNECTIONS = 4;
-            const MAX_CONNECTIONS = 8;
             const WARMUP = 500;
+            const PROBE_DURATION = 2000;
             const TEST_DURATION = 14000;
-            const CHUNK_SIZE = 1024 * 1024;
+            const CHUNK_SIZE = 512 * 1024;
 
-            let connections = MIN_CONNECTIONS;
-            let total = 0;
+            // Start gently for 2.4 GHz and lower-speed connections.
+            let connectionCount = 2;
+            let totalUploaded = 0;
+            let probeUploaded = 0;
+            let measuredUploaded = 0;
             let running = true;
+            let lastUI = 0;
 
-            function randomData(size) {
+            const testStart = performance.now();
+            const warmupEnd = testStart + WARMUP;
+            const probeEnd = warmupEnd + PROBE_DURATION;
+            const stopTime = warmupEnd + TEST_DURATION;
+
+            function makeRandomData(size) {
                 const data = new Uint8Array(size);
                 for (let i = 0; i < size; i += 65536) {
                     const end = Math.min(i + 65536, size);
@@ -392,12 +434,17 @@
                 return data;
             }
 
-            async function uploadLoop() {
-                while (running) {
+            async function uploadLoop(id) {
+                while (running && performance.now() < stopTime) {
+                    if (abortController?.signal.aborted) {
+                        throw new DOMException('Aborted', 'AbortError');
+                    }
+
                     try {
-                        const data = randomData(CHUNK_SIZE);
+                        const data = makeRandomData(CHUNK_SIZE);
+
                         const response = await fetch(
-                            UPLOAD_ENDPOINT + '?t=' + Date.now() + Math.random(),
+                            `${UPLOAD_ENDPOINT}?t=${Date.now()}-${id}-${Math.random()}`,
                             {
                                 method: 'POST',
                                 body: data,
@@ -410,65 +457,82 @@
                             }
                         );
 
-                        if (!response.ok)
+                        if (!response.ok) {
                             throw new Error(`HTTP ${response.status}`);
+                        }
 
-                        total += data.byteLength;
+                        const now = performance.now();
+                        totalUploaded += data.byteLength;
+
+                        if (now >= warmupEnd && now < probeEnd) {
+                            probeUploaded += data.byteLength;
+                        } else if (now >= probeEnd) {
+                            measuredUploaded += data.byteLength;
+                        }
                     } catch (e) {
                         if (e.name === 'AbortError') throw e;
-                        await new Promise(r => setTimeout(r, 50));
+                        await new Promise(r => setTimeout(r, 80));
                     }
                 }
             }
 
-            const workers = [];
-            for (let i = 0; i < MIN_CONNECTIONS; i++)
-                workers.push(uploadLoop());
+            // Gentle 2-stream probe.
+            const workers = [uploadLoop(0), uploadLoop(1)];
 
-            const warmupStart = performance.now();
-            while (performance.now() - warmupStart < WARMUP)
-                await new Promise(r => setTimeout(r, 25));
-
-            const measurementStart = performance.now();
-            const startBytes = total;
-            let lastUI = 0;
-            let lastAdaptive = measurementStart;
-            let lastBytes = total;
-
-            while (performance.now() - measurementStart < TEST_DURATION) {
+            while (performance.now() < probeEnd) {
                 const now = performance.now();
-                const elapsed = (now - measurementStart) / 1000;
-                const measured = total - startBytes;
-                const live = elapsed > 0
-                    ? measured * 8 / (elapsed * 1e6)
-                    : 0;
+                const elapsed = Math.max(0, now - warmupEnd) / 1000;
 
                 if (now - lastUI >= 150) {
+                    const liveMbps = elapsed > 0
+                        ? probeUploaded * 8 / (elapsed * 1e6)
+                        : 0;
+
                     updateProgress(
-                        'Uploading...',
-                        60 + Math.min(35, elapsed / 14 * 35),
-                        `Uploading... ${live.toFixed(1)} Mbps • ${connections} streams`
+                        'Testing connection...',
+                        60 + Math.min(10, elapsed / 2 * 10),
+                        elapsed > 0
+                            ? `Testing upload... ${liveMbps.toFixed(1)} Mbps • 2 streams`
+                            : 'Warming up upload...'
                     );
                     lastUI = now;
                 }
 
-                if (
-                    connections < MAX_CONNECTIONS &&
-                    now - lastAdaptive >= 1000
-                ) {
-                    const intervalBytes = total - lastBytes;
-                    const intervalSeconds = (now - lastAdaptive) / 1000;
-                    const intervalMbps = intervalSeconds > 0
-                        ? intervalBytes * 8 / (intervalSeconds * 1e6)
+                await new Promise(r => setTimeout(r, 50));
+            }
+
+            // Lower-speed links stay at 2–3 streams.
+            const probeMbps =
+                probeUploaded * 8 / (PROBE_DURATION / 1000 * 1e6);
+
+            if (probeMbps < 50) connectionCount = 2;
+            else if (probeMbps < 100) connectionCount = 3;
+            else if (probeMbps < 300) connectionCount = 4;
+            else if (probeMbps < 600) connectionCount = 6;
+            else connectionCount = 8;
+
+            for (let i = 2; i < connectionCount; i++) {
+                workers.push(uploadLoop(i));
+            }
+
+            // Main 14-second measurement.
+            const measurementStart = performance.now();
+
+            while (performance.now() < stopTime) {
+                const now = performance.now();
+                const elapsed = Math.max(0, now - measurementStart) / 1000;
+
+                if (now - lastUI >= 150) {
+                    const liveMbps = elapsed > 0
+                        ? measuredUploaded * 8 / (elapsed * 1e6)
                         : 0;
 
-                    if (elapsed >= 1 && intervalMbps > 40) {
-                        workers.push(uploadLoop());
-                        connections++;
-                    }
-
-                    lastBytes = total;
-                    lastAdaptive = now;
+                    updateProgress(
+                        'Uploading...',
+                        70 + Math.min(25, elapsed / 14 * 25),
+                        `Uploading... ${liveMbps.toFixed(1)} Mbps • ${connectionCount} streams`
+                    );
+                    lastUI = now;
                 }
 
                 await new Promise(r => setTimeout(r, 50));
@@ -478,15 +542,16 @@
             await Promise.allSettled(workers);
 
             const duration = (performance.now() - measurementStart) / 1000;
-            const measured = total - startBytes;
 
-            if (measured <= 0)
+            if (measuredUploaded <= 0) {
                 throw new Error('No upload data was transferred');
+            }
 
             return {
-                speed: measured * 8 / (duration * 1e6),
-                bytes: measured,
-                connections
+                speed: measuredUploaded * 8 / (duration * 1e6),
+                bytes: measuredUploaded,
+                connections: connectionCount,
+                probeMbps
             };
         }
 
