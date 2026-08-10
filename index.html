@@ -501,11 +501,15 @@
             const probeMbps =
                 probeUploaded * 8 / (PROBE_DURATION / 1000 * 1e6);
 
+            // Upload-specific adaptive stream count:
+            // <50 Mbps = 2 streams
+            // 50–100 Mbps = 3 streams
+            // 100–150 Mbps = 4 streams
+            // >150 Mbps = 5 streams
             if (probeMbps < 50) connectionCount = 2;
             else if (probeMbps < 100) connectionCount = 3;
-            else if (probeMbps < 300) connectionCount = 4;
-            else if (probeMbps < 600) connectionCount = 6;
-            else connectionCount = 8;
+            else if (probeMbps < 150) connectionCount = 4;
+            else connectionCount = 5;
 
             for (let i = 2; i < connectionCount; i++) {
                 workers.push(uploadLoop(i));
