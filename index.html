@@ -353,7 +353,7 @@
                 if (
                     now - lastDecision >= 1500 &&
                     elapsed >= 1.5 &&
-                    connectionCount < 8
+                    connectionCount < 10
                 ) {
                     const recent = samples.slice(-3);
 
@@ -373,11 +373,13 @@
                     if (currentRate < 50) {
                         maxStreams = 2;
                     } else if (currentRate < 100) {
-                        maxStreams = 4;
+                        maxStreams = 3;
                     } else if (currentRate < 150) {
+                        maxStreams = 4;
+                    } else if (currentRate < 200) {
                         maxStreams = 6;
                     } else {
-                        maxStreams = 8;
+                        maxStreams = 10;
                     }
 
                     // Add one stream at a time when throughput is not
@@ -577,11 +579,11 @@
                         totalUploaded;
                 }
 
-                // Same gradual stream policy as download.
+                // Same gradual stream policy as download (up to 10 streams).
                 if (
                     now - lastDecision >= 1500 &&
                     elapsed >= 1.5 &&
-                    connectionCount < 8
+                    connectionCount < 10
                 ) {
                     const recent =
                         samples.slice(-3);
@@ -605,11 +607,13 @@
                     if (currentRate < 50) {
                         maxStreams = 2;
                     } else if (currentRate < 100) {
-                        maxStreams = 4;
+                        maxStreams = 3;
                     } else if (currentRate < 150) {
+                        maxStreams = 4;
+                    } else if (currentRate < 200) {
                         maxStreams = 6;
                     } else {
-                        maxStreams = 8;
+                        maxStreams = 10;
                     }
 
                     const shouldIncrease =
