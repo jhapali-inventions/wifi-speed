@@ -411,25 +411,28 @@
         async function measureUpload() {
             const WARMUP = 500;
             const TEST_DURATION = 14000;
-            const CHUNK_SIZE = 512 * 1024;
+            const CHUNK_SIZE = 1024 * 1024;
 
             let connectionCount = 2;
             let running = true;
             let totalUploaded = 0;
+
             let lastUI = 0;
             let lastSample = performance.now();
             let lastSampleBytes = 0;
             let lastDecision = performance.now();
-            let previousRate = 0;
+
             const samples = [];
             const workers = [];
 
-            function makeRandomData(size) {
+            function makePayload(size) {
                 const data = new Uint8Array(size);
+
                 for (let i = 0; i < size; i += 65536) {
                     const end = Math.min(i + 65536, size);
                     crypto.getRandomValues(data.subarray(i, end));
                 }
+
                 return data;
             }
 
@@ -437,43 +440,48 @@
             const warmupEnd = start + WARMUP;
             const stopTime = warmupEnd + TEST_DURATION;
 
-            const uploadLoop = async (id) => {
+            const uploadStream = async (id) => {
+                const payload = makePayload(CHUNK_SIZE);
+
                 while (running && performance.now() < stopTime) {
-                    if (abortController?.signal.aborted)
+                    if (abortController?.signal.aborted) {
                         throw new DOMException('Aborted', 'AbortError');
+                    }
 
                     try {
-                        const data = makeRandomData(CHUNK_SIZE);
-
                         const response = await fetch(
-                            `${UPLOAD_ENDPOINT}?t=${Date.now()}-${id}-${Math.random()}`,
+                            `${UPLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&t=${Date.now()}-${id}-${Math.random()}`,
                             {
                                 method: 'POST',
-                                body: data,
+                                body: payload,
                                 cache: 'no-store',
                                 headers: {
-                                    'Content-Type': 'application/octet-stream'
+                                    'Content-Type':
+                                        'application/octet-stream'
                                 },
                                 signal: abortController?.signal
                             }
                         );
 
-                        if (!response.ok)
+                        if (!response.ok) {
                             throw new Error(`HTTP ${response.status}`);
+                        }
 
-                        if (performance.now() >= warmupEnd)
-                            totalUploaded += data.byteLength;
+                        if (performance.now() >= warmupEnd) {
+                            totalUploaded += payload.byteLength;
+                        }
                     } catch (e) {
                         if (e.name === 'AbortError') throw e;
-                        await new Promise(r => setTimeout(r, 60));
+                        await new Promise(r => setTimeout(r, 25));
                     }
                 }
             };
 
-            workers.push(uploadLoop(0), uploadLoop(1));
+            workers.push(uploadStream(0), uploadStream(1));
 
-            while (performance.now() < warmupEnd)
-                await new Promise(r => setTimeout(r, 25));
+            while (performance.now() < warmupEnd) {
+                await new Promise(r => setTimeout(r, 20));
+            }
 
             const measurementStart = performance.now();
 
@@ -485,8 +493,10 @@
                 if (sampleElapsed >= 0.5) {
                     const sampleBytes =
                         totalUploaded - lastSampleBytes;
+
                     const rate =
-                        sampleBytes * 8 / (sampleElapsed * 1e6);
+                        sampleBytes * 8 /
+                        (sampleElapsed * 1e6);
 
                     if (rate > 0) samples.push(rate);
 
@@ -494,73 +504,77 @@
                     lastSampleBytes = totalUploaded;
                 }
 
-                if (now - lastDecision >= 1500 && elapsed >= 1.5 &&
-                    connectionCount < 10) {
+                if (
+                    now - lastDecision >= 1500 &&
+                    elapsed >= 1.5 &&
+                    connectionCount < 10
+                ) {
                     const recent = samples.slice(-3);
+
                     const currentRate = recent.length
-                        ? recent.reduce((a, b) => a + b, 0) / recent.length
+                        ? recent.reduce((a, b) => a + b, 0) /
+                          recent.length
                         : 0;
 
-                    const maxStreams =
-                        currentRate < 50 ? 3 :
-                        currentRate < 100 ? 4 :
-                        currentRate < 300 ? 6 : 8;
+                    let targetStreams;
 
-                    if (connectionCount < maxStreams &&
-                        (previousRate === 0 ||
-                         currentRate >= previousRate * 0.97)) {
-                        workers.push(uploadLoop(connectionCount));
+                    if (currentRate < 50) {
+                        targetStreams = 2;
+                    } else if (currentRate < 100) {
+                        targetStreams = 3;
+                    } else if (currentRate < 150) {
+                        targetStreams = 4;
+                    } else if (currentRate < 200) {
+                        targetStreams = 6;
+                    } else {
+                        targetStreams = 10;
+                    }
+
+                    if (connectionCount < targetStreams) {
+                        workers.push(
+                            uploadStream(connectionCount)
+                        );
                         connectionCount++;
                     }
 
-                    previousRate = currentRate;
                     lastDecision = now;
                 }
 
                 if (now - lastUI >= 150) {
                     const liveMbps = elapsed > 0
-                        ? totalUploaded * 8 / (elapsed * 1e6) : 0;
+                        ? totalUploaded * 8 / (elapsed * 1e6)
+                        : 0;
 
                     updateProgress(
                         'Uploading...',
                         60 + Math.min(35, elapsed / 14 * 35),
                         `Uploading... ${liveMbps.toFixed(1)} Mbps • ${connectionCount} streams`
                     );
+
                     lastUI = now;
                 }
 
-                await new Promise(r => setTimeout(r, 40));
+                await new Promise(r => setTimeout(r, 30));
             }
 
             running = false;
             await Promise.allSettled(workers);
 
-            const duration = (performance.now() - measurementStart) / 1000;
+            const duration =
+                (performance.now() - measurementStart) / 1000;
 
-            if (totalUploaded <= 0)
+            if (totalUploaded <= 0) {
                 throw new Error('No upload data was transferred');
-
-            let stable = samples.slice();
-
-            if (stable.length >= 10) {
-                stable.sort((a, b) => a - b);
-                const trim = Math.floor(stable.length * 0.10);
-                stable = stable.slice(trim, stable.length - trim);
             }
-
-            const sampleAverage = stable.length
-                ? stable.reduce((a, b) => a + b, 0) / stable.length
-                : 0;
 
             const totalRate =
                 totalUploaded * 8 / (duration * 1e6);
 
             return {
-                speed: sampleAverage > 0
-                    ? totalRate * 0.65 + sampleAverage * 0.35
-                    : totalRate,
+                speed: totalRate,
                 bytes: totalUploaded,
-                connections: connectionCount
+                connections: connectionCount,
+                samples
             };
         }
 
