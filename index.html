@@ -403,374 +403,172 @@
         }
 
         // ============================================================
-        // STREAMING UPLOAD TEST
+        // CONTINUOUS ADAPTIVE UPLOAD TEST
         // ============================================================
-        // IMPORTANT:
-        // This endpoint is a SEPARATE Cloudflare Worker dedicated to
-        // upload testing. The working download Worker is untouched.
         const UPLOAD_ENDPOINT =
             'https://uploadworker.aayushadhikari609.workers.dev';
 
         async function measureUpload() {
+            const WARMUP = 500;
             const TEST_DURATION = 14000;
-
-            // Each HTTP upload is a real streaming request. 16 MB keeps
-            // request overhead low while still allowing the test to stop
-            // without creating enormous browser memory pressure.
-            const REQUEST_SIZE = 16 * 1024 * 1024;
-
-            const CHUNK_SIZE = 256 * 1024;
+            const CHUNK_SIZE = 1024 * 1024;
 
             let connectionCount = 2;
-            let totalUploaded = 0;
             let running = true;
+            let totalUploaded = 0;
 
             let lastUI = 0;
-            let lastDecision = performance.now();
             let lastSample = performance.now();
             let lastSampleBytes = 0;
+            let lastDecision = performance.now();
 
             const samples = [];
             const workers = [];
-            const activeRequests = new Set();
 
-            const measurementStart = performance.now();
-            const stopTime =
-                measurementStart + TEST_DURATION;
-
-            function makeChunk(size) {
+            function makePayload(size) {
                 const data = new Uint8Array(size);
 
-                // Random-looking data prevents compression or other
-                // optimizations from making the measurement artificial.
                 for (let i = 0; i < size; i += 65536) {
                     const end = Math.min(i + 65536, size);
-                    crypto.getRandomValues(
-                        data.subarray(i, end)
-                    );
+                    crypto.getRandomValues(data.subarray(i, end));
                 }
 
                 return data;
             }
 
-            // Reuse one chunk for every stream. This avoids repeatedly
-            // generating random data during the test.
-            const payloadChunk =
-                makeChunk(CHUNK_SIZE);
+            const start = performance.now();
+            const warmupEnd = start + WARMUP;
+            const stopTime = warmupEnd + TEST_DURATION;
 
-            async function streamUpload(id) {
-                while (
-                    running &&
-                    performance.now() < stopTime
-                ) {
+            const uploadStream = async (id) => {
+                const payload = makePayload(CHUNK_SIZE);
+
+                while (running && performance.now() < stopTime) {
                     if (abortController?.signal.aborted) {
-                        throw new DOMException(
-                            'Aborted',
-                            'AbortError'
-                        );
+                        throw new DOMException('Aborted', 'AbortError');
                     }
 
-                    let produced = 0;
-
-                    const body = new ReadableStream({
-                        pull(controller) {
-                            if (
-                                produced >= REQUEST_SIZE ||
-                                performance.now() >= stopTime
-                            ) {
-                                controller.close();
-                                return;
+                    try {
+                        const response = await fetch(
+                            `${UPLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&t=${Date.now()}-${id}-${Math.random()}`,
+                            {
+                                method: 'POST',
+                                body: payload,
+                                cache: 'no-store',
+                                headers: {
+                                    'Content-Type':
+                                        'application/octet-stream'
+                                },
+                                signal: abortController?.signal
                             }
+                        );
 
-                            const remaining =
-                                REQUEST_SIZE - produced;
-
-                            const amount =
-                                Math.min(
-                                    remaining,
-                                    payloadChunk.byteLength
-                                );
-
-                            controller.enqueue(
-                                amount ===
-                                payloadChunk.byteLength
-                                    ? payloadChunk
-                                    : payloadChunk.slice(
-                                        0,
-                                        amount
-                                    )
-                            );
-
-                            produced += amount;
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
                         }
-                    });
 
-                    const requestPromise =
-                        (async () => {
-                            try {
-                                const response =
-                                    await fetch(
-                                        `${UPLOAD_ENDPOINT}?t=${Date.now()}-${id}-${Math.random()}`,
-                                        {
-                                            method: 'POST',
-                                            body,
-                                            duplex: 'half',
-                                            cache: 'no-store',
-                                            headers: {
-                                                'Content-Type':
-                                                    'application/octet-stream'
-                                            },
-                                            signal:
-                                                abortController?.signal
-                                        }
-                                    );
-
-                                if (!response.ok) {
-                                    throw new Error(
-                                        `HTTP ${response.status}`
-                                    );
-                                }
-
-                                const result =
-                                    await response.json();
-
-                                // Count ONLY bytes confirmed by the
-                                // dedicated Worker.
-                                if (
-                                    result &&
-                                    Number.isFinite(
-                                        result.receivedBytes
-                                    )
-                                ) {
-                                    totalUploaded +=
-                                        result.receivedBytes;
-                                }
-                            } catch (e) {
-                                if (
-                                    e.name ===
-                                    'AbortError'
-                                ) {
-                                    throw e;
-                                }
-
-                                // If the browser does not support
-                                // streaming request bodies, surface a
-                                // useful error rather than silently
-                                // reporting a bad speed.
-                                if (
-                                    String(e).includes(
-                                        'duplex'
-                                    ) ||
-                                    String(e).includes(
-                                        'ReadableStream'
-                                    )
-                                ) {
-                                    throw new Error(
-                                        'This browser does not support streaming upload requests.'
-                                    );
-                                }
-
-                                await new Promise(
-                                    r => setTimeout(r, 20)
-                                );
-                            } finally {
-                                activeRequests.delete(
-                                    requestPromise
-                                );
-                            }
-                        })();
-
-                    activeRequests.add(
-                        requestPromise
-                    );
-
-                    // Do not wait for the request before scheduling
-                    // another request on this stream. The request itself
-                    // is already streaming.
-                    await requestPromise;
+                        if (performance.now() >= warmupEnd) {
+                            totalUploaded += payload.byteLength;
+                        }
+                    } catch (e) {
+                        if (e.name === 'AbortError') throw e;
+                        await new Promise(r => setTimeout(r, 25));
+                    }
                 }
+            };
+
+            workers.push(uploadStream(0), uploadStream(1));
+
+            while (performance.now() < warmupEnd) {
+                await new Promise(r => setTimeout(r, 20));
             }
 
-            // Start at 2 streams.
-            workers.push(
-                streamUpload(0),
-                streamUpload(1)
-            );
+            const measurementStart = performance.now();
 
-            // Adaptive stream control.
-            while (
-                performance.now() <
-                stopTime
-            ) {
-                const now =
-                    performance.now();
+            while (performance.now() < stopTime) {
+                const now = performance.now();
+                const elapsed = (now - measurementStart) / 1000;
+                const sampleElapsed = (now - lastSample) / 1000;
 
-                const elapsed =
-                    (now - measurementStart) /
-                    1000;
-
-                const sampleElapsed =
-                    (now - lastSample) /
-                    1000;
-
-                if (
-                    sampleElapsed >= 0.5
-                ) {
+                if (sampleElapsed >= 0.5) {
                     const sampleBytes =
-                        totalUploaded -
-                        lastSampleBytes;
+                        totalUploaded - lastSampleBytes;
 
                     const rate =
                         sampleBytes * 8 /
                         (sampleElapsed * 1e6);
 
-                    if (rate > 0) {
-                        samples.push(rate);
-                    }
+                    if (rate > 0) samples.push(rate);
 
                     lastSample = now;
-                    lastSampleBytes =
-                        totalUploaded;
+                    lastSampleBytes = totalUploaded;
                 }
 
-                // Requested policy:
-                // <50 Mbps       -> 2
-                // 50-100 Mbps    -> 3
-                // 100-150 Mbps   -> 4
-                // 150-200 Mbps   -> 6
-                // >200 Mbps      -> 8-10
                 if (
                     now - lastDecision >= 1500 &&
                     elapsed >= 1.5 &&
                     connectionCount < 10
                 ) {
-                    const recent =
-                        samples.slice(-3);
+                    const recent = samples.slice(-3);
 
-                    const currentRate =
-                        recent.length
-                            ? recent.reduce(
-                                (a, b) => a + b,
-                                0
-                            ) / recent.length
-                            : 0;
+                    const currentRate = recent.length
+                        ? recent.reduce((a, b) => a + b, 0) /
+                          recent.length
+                        : 0;
 
                     let targetStreams;
 
                     if (currentRate < 50) {
                         targetStreams = 2;
-                    } else if (
-                        currentRate < 100
-                    ) {
+                    } else if (currentRate < 100) {
                         targetStreams = 3;
-                    } else if (
-                        currentRate < 150
-                    ) {
+                    } else if (currentRate < 150) {
                         targetStreams = 4;
-                    } else if (
-                        currentRate < 200
-                    ) {
+                    } else if (currentRate < 200) {
                         targetStreams = 6;
                     } else {
                         targetStreams = 10;
                     }
 
-                    if (
-                        connectionCount <
-                        targetStreams
-                    ) {
+                    if (connectionCount < targetStreams) {
                         workers.push(
-                            streamUpload(
-                                connectionCount
-                            )
+                            uploadStream(connectionCount)
                         );
-
                         connectionCount++;
                     }
 
                     lastDecision = now;
                 }
 
-                if (
-                    now - lastUI >= 150
-                ) {
-                    const liveMbps =
-                        elapsed > 0
-                            ? totalUploaded * 8 /
-                              (elapsed * 1e6)
-                            : 0;
+                if (now - lastUI >= 150) {
+                    const liveMbps = elapsed > 0
+                        ? totalUploaded * 8 / (elapsed * 1e6)
+                        : 0;
 
                     updateProgress(
                         'Uploading...',
-                        60 + Math.min(
-                            35,
-                            elapsed / 14 * 35
-                        ),
+                        60 + Math.min(35, elapsed / 14 * 35),
                         `Uploading... ${liveMbps.toFixed(1)} Mbps • ${connectionCount} streams`
                     );
 
                     lastUI = now;
                 }
 
-                await new Promise(
-                    r => setTimeout(r, 50)
-                );
+                await new Promise(r => setTimeout(r, 30));
             }
 
-            // Stop creating new upload requests.
             running = false;
-
-            // Give already-started streaming requests a chance to finish.
-            // This keeps the final result based on bytes actually confirmed
-            // by the Worker rather than bytes merely queued by the browser.
-            const settleDeadline =
-                performance.now() + 2500;
-
-            while (
-                activeRequests.size > 0 &&
-                performance.now() < settleDeadline
-            ) {
-                await Promise.race([
-                    ...activeRequests
-                ]).catch(() => {});
-
-                if (
-                    activeRequests.size === 0
-                ) {
-                    break;
-                }
-            }
-
-            // Abort any request that is still hanging.
-            if (
-                activeRequests.size > 0 &&
-                abortController
-            ) {
-                try {
-                    abortController.abort();
-                } catch (_) {}
-            }
-
-            await Promise.allSettled(
-                workers
-            );
+            await Promise.allSettled(workers);
 
             const duration =
-                (performance.now() -
-                    measurementStart) /
-                1000;
+                (performance.now() - measurementStart) / 1000;
 
-            if (
-                totalUploaded <= 0
-            ) {
-                throw new Error(
-                    'No upload data was confirmed by the upload Worker.'
-                );
+            if (totalUploaded <= 0) {
+                throw new Error('No upload data was transferred');
             }
 
             const totalRate =
-                totalUploaded * 8 /
-                (duration * 1e6);
+                totalUploaded * 8 / (duration * 1e6);
 
             return {
                 speed: totalRate,
