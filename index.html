@@ -264,7 +264,6 @@
             let lastSampleBytes = 0;
             let lastDecision = performance.now();
             let previousRate = 0;
-
             const samples = [];
             const workers = [];
 
@@ -272,8 +271,6 @@
             const warmupEnd = start + WARMUP;
             const stopTime = warmupEnd + TEST_DURATION;
 
-            // Continuous requests: every worker immediately requests
-            // another chunk when the previous chunk finishes.
             const stream = async (id) => {
                 while (running && performance.now() < stopTime) {
                     if (abortController?.signal.aborted)
@@ -294,7 +291,7 @@
                         const reader = response.body.getReader();
 
                         while (true) {
-                            const { done, value } = await reader.read();
+                            const {done, value} = await reader.read();
                             if (done) break;
 
                             const now = performance.now();
@@ -308,93 +305,50 @@
                                 totalBytes += value.byteLength;
                         }
                     } catch (e) {
-                        if (e.name === 'AbortError')
-                            throw e;
-
-                        await new Promise(r => setTimeout(r, 40));
+                        if (e.name === 'AbortError') throw e;
+                        await new Promise(r => setTimeout(r, 60));
                     }
                 }
             };
 
-            // Start with 2 streams.
             workers.push(stream(0), stream(1));
 
-            // Warm-up.
             while (performance.now() < warmupEnd)
-                await new Promise(r => setTimeout(r, 20));
+                await new Promise(r => setTimeout(r, 25));
 
             const measurementStart = performance.now();
 
             while (performance.now() < stopTime) {
                 const now = performance.now();
-                const elapsed =
-                    (now - measurementStart) / 1000;
+                const elapsed = (now - measurementStart) / 1000;
+                const sampleElapsed = (now - lastSample) / 1000;
 
-                const sampleElapsed =
-                    (now - lastSample) / 1000;
-
-                // 500 ms internal throughput sample.
                 if (sampleElapsed >= 0.5) {
-                    const sampleBytes =
-                        totalBytes - lastSampleBytes;
+                    const sampleBytes = totalBytes - lastSampleBytes;
+                    const rate = sampleBytes * 8 / (sampleElapsed * 1e6);
 
-                    const rate =
-                        sampleBytes * 8 /
-                        (sampleElapsed * 1e6);
-
-                    if (rate > 0)
-                        samples.push(rate);
+                    if (rate > 0) samples.push(rate);
 
                     lastSample = now;
                     lastSampleBytes = totalBytes;
                 }
 
-                // Gradually increase streams every 1.5 seconds.
-                if (
-                    now - lastDecision >= 1500 &&
-                    elapsed >= 1.5 &&
-                    connectionCount < 10
-                ) {
+                if (now - lastDecision >= 1500 && elapsed >= 1.5 &&
+                    connectionCount < 10) {
                     const recent = samples.slice(-3);
-
                     const currentRate = recent.length
-                        ? recent.reduce((a, b) => a + b, 0) /
-                          recent.length
+                        ? recent.reduce((a, b) => a + b, 0) / recent.length
                         : 0;
 
-                    // Requested stream policy:
-                    // <50 Mbps       -> 2 streams
-                    // 50-100 Mbps    -> 3-4 streams
-                    // 100-150 Mbps   -> 5-6 streams
-                    // 150-200 Mbps   -> 6-8 streams
-                    // >=200 Mbps     -> 8 streams
-                    let maxStreams;
+                    const maxStreams =
+                        currentRate < 50 ? 2 :
+                        currentRate < 100 ? 4 :
+                        currentRate < 300 ? 6 : 8;
 
-                    if (currentRate < 50) {
-                        maxStreams = 2;
-                    } else if (currentRate < 100) {
-                        maxStreams = 3;
-                    } else if (currentRate < 150) {
-                        maxStreams = 4;
-                    } else if (currentRate < 200) {
-                        maxStreams = 6;
-                    } else {
-                        maxStreams = 10;
-                    }
-
-                    // Add one stream at a time when throughput is not
-                    // dropping significantly.
-                    const shouldIncrease =
-                        previousRate === 0 ||
-                        currentRate >= previousRate * 0.97;
-
-                    if (
-                        shouldIncrease &&
-                        connectionCount < maxStreams
-                    ) {
-                        workers.push(
-                            stream(connectionCount)
-                        );
+                    if (connectionCount < maxStreams &&
+                        (previousRate === 0 ||
+                         currentRate >= previousRate * 0.97)) {
+                        workers.push(stream(connectionCount));
                         connectionCount++;
                     }
 
@@ -404,42 +358,47 @@
 
                 if (now - lastUI >= 150) {
                     const liveMbps = elapsed > 0
-                        ? totalBytes * 8 /
-                          (elapsed * 1e6)
-                        : 0;
+                        ? totalBytes * 8 / (elapsed * 1e6) : 0;
 
                     updateProgress(
                         'Downloading...',
                         10 + Math.min(50, elapsed / 14 * 50),
                         `Downloading... ${liveMbps.toFixed(1)} Mbps • ${connectionCount} streams`
                     );
-
                     lastUI = now;
                 }
 
-                await new Promise(r => setTimeout(r, 30));
+                await new Promise(r => setTimeout(r, 40));
             }
 
             running = false;
             await Promise.allSettled(workers);
 
-            const duration =
-                (performance.now() - measurementStart) / 1000;
+            const duration = (performance.now() - measurementStart) / 1000;
 
             if (totalBytes <= 0)
                 throw new Error('No download data was received');
 
-            // Final speed is based on all data transferred during the
-            // continuous measurement, with no external correction factor.
-            const totalRate =
-                totalBytes * 8 /
-                (duration * 1e6);
+            let stable = samples.slice();
+
+            if (stable.length >= 10) {
+                stable.sort((a, b) => a - b);
+                const trim = Math.floor(stable.length * 0.10);
+                stable = stable.slice(trim, stable.length - trim);
+            }
+
+            const sampleAverage = stable.length
+                ? stable.reduce((a, b) => a + b, 0) / stable.length
+                : 0;
+
+            const totalRate = totalBytes * 8 / (duration * 1e6);
 
             return {
-                speed: totalRate,
+                speed: sampleAverage > 0
+                    ? totalRate * 0.65 + sampleAverage * 0.35
+                    : totalRate,
                 bytes: totalBytes,
-                connections: connectionCount,
-                samples
+                connections: connectionCount
             };
         }
 
@@ -452,39 +411,25 @@
         async function measureUpload() {
             const WARMUP = 500;
             const TEST_DURATION = 14000;
-
-            // Larger chunks reduce HTTP request overhead and help keep
-            // the upload pipe full on both 2.4 GHz and 5 GHz Wi-Fi.
-            const CHUNK_SIZE = 2 * 1024 * 1024;
+            const CHUNK_SIZE = 512 * 1024;
 
             let connectionCount = 2;
             let running = true;
             let totalUploaded = 0;
-
             let lastUI = 0;
             let lastSample = performance.now();
             let lastSampleBytes = 0;
-
             let lastDecision = performance.now();
             let previousRate = 0;
-
             const samples = [];
             const workers = [];
 
-            // Generate one reusable random buffer per stream.
-            // Reusing the buffer avoids repeatedly spending CPU time
-            // generating random bytes during the measurement.
             function makeRandomData(size) {
                 const data = new Uint8Array(size);
-
                 for (let i = 0; i < size; i += 65536) {
                     const end = Math.min(i + 65536, size);
-
-                    crypto.getRandomValues(
-                        data.subarray(i, end)
-                    );
+                    crypto.getRandomValues(data.subarray(i, end));
                 }
-
                 return data;
             }
 
@@ -492,256 +437,130 @@
             const warmupEnd = start + WARMUP;
             const stopTime = warmupEnd + TEST_DURATION;
 
-            // ------------------------------------------------------------
-            // One continuous upload stream
-            // ------------------------------------------------------------
             const uploadLoop = async (id) => {
-                // Create the payload once and reuse it.
-                const payload = makeRandomData(CHUNK_SIZE);
-
-                while (
-                    running &&
-                    performance.now() < stopTime
-                ) {
-                    if (abortController?.signal.aborted) {
-                        throw new DOMException(
-                            'Aborted',
-                            'AbortError'
-                        );
-                    }
+                while (running && performance.now() < stopTime) {
+                    if (abortController?.signal.aborted)
+                        throw new DOMException('Aborted', 'AbortError');
 
                     try {
-                        const requestStart = performance.now();
+                        const data = makeRandomData(CHUNK_SIZE);
 
                         const response = await fetch(
-                            `${UPLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&t=${Date.now()}-${id}-${Math.random()}`,
+                            `${UPLOAD_ENDPOINT}?t=${Date.now()}-${id}-${Math.random()}`,
                             {
                                 method: 'POST',
-                                body: payload,
+                                body: data,
                                 cache: 'no-store',
                                 headers: {
-                                    'Content-Type':
-                                        'application/octet-stream'
+                                    'Content-Type': 'application/octet-stream'
                                 },
-                                signal:
-                                    abortController?.signal
+                                signal: abortController?.signal
                             }
                         );
 
-                        if (!response.ok) {
-                            throw new Error(
-                                `HTTP ${response.status}`
-                            );
-                        }
+                        if (!response.ok)
+                            throw new Error(`HTTP ${response.status}`);
 
-                        // Count the complete payload only after the
-                        // server has accepted the request.
-                        if (
-                            performance.now() >=
-                            warmupEnd
-                        ) {
-                            totalUploaded +=
-                                payload.byteLength;
-                        }
-
+                        if (performance.now() >= warmupEnd)
+                            totalUploaded += data.byteLength;
                     } catch (e) {
-                        if (e.name === 'AbortError') {
-                            throw e;
-                        }
-
-                        // Short retry delay for transient failures.
-                        await new Promise(
-                            r => setTimeout(r, 20)
-                        );
+                        if (e.name === 'AbortError') throw e;
+                        await new Promise(r => setTimeout(r, 60));
                     }
                 }
             };
 
-            // Start with exactly 2 upload streams.
-            workers.push(
-                uploadLoop(0),
-                uploadLoop(1)
-            );
+            workers.push(uploadLoop(0), uploadLoop(1));
 
-            // Warm-up.
-            while (
-                performance.now() <
-                warmupEnd
-            ) {
-                await new Promise(
-                    r => setTimeout(r, 20)
-                );
-            }
+            while (performance.now() < warmupEnd)
+                await new Promise(r => setTimeout(r, 25));
 
-            const measurementStart =
-                performance.now();
+            const measurementStart = performance.now();
 
-            // ------------------------------------------------------------
-            // Continuous 14-second upload measurement
-            // ------------------------------------------------------------
-            while (
-                performance.now() <
-                stopTime
-            ) {
-                const now =
-                    performance.now();
+            while (performance.now() < stopTime) {
+                const now = performance.now();
+                const elapsed = (now - measurementStart) / 1000;
+                const sampleElapsed = (now - lastSample) / 1000;
 
-                const elapsed =
-                    (now - measurementStart) /
-                    1000;
-
-                const sampleElapsed =
-                    (now - lastSample) /
-                    1000;
-
-                // 500 ms internal samples are used only to decide
-                // whether another stream should be added.
-                if (
-                    sampleElapsed >= 0.5
-                ) {
+                if (sampleElapsed >= 0.5) {
                     const sampleBytes =
-                        totalUploaded -
-                        lastSampleBytes;
-
+                        totalUploaded - lastSampleBytes;
                     const rate =
-                        sampleBytes * 8 /
-                        (sampleElapsed * 1e6);
+                        sampleBytes * 8 / (sampleElapsed * 1e6);
 
-                    if (rate > 0) {
-                        samples.push(rate);
-                    }
+                    if (rate > 0) samples.push(rate);
 
                     lastSample = now;
-                    lastSampleBytes =
-                        totalUploaded;
+                    lastSampleBytes = totalUploaded;
                 }
 
-                // --------------------------------------------------------
-                // Gradual stream increase
-                //
-                // < 50 Mbps       -> 2
-                // 50-100 Mbps     -> 3
-                // 100-150 Mbps   -> 4
-                // 150-200 Mbps   -> 6
-                // > 200 Mbps     -> 8-10
-                // --------------------------------------------------------
-                if (
-                    now - lastDecision >= 1500 &&
-                    elapsed >= 1.5 &&
-                    connectionCount < 10
-                ) {
-                    const recent =
-                        samples.slice(-3);
+                if (now - lastDecision >= 1500 && elapsed >= 1.5 &&
+                    connectionCount < 10) {
+                    const recent = samples.slice(-3);
+                    const currentRate = recent.length
+                        ? recent.reduce((a, b) => a + b, 0) / recent.length
+                        : 0;
 
-                    const currentRate =
-                        recent.length
-                            ? recent.reduce(
-                                (a, b) => a + b,
-                                0
-                            ) / recent.length
-                            : 0;
+                    const maxStreams =
+                        currentRate < 50 ? 3 :
+                        currentRate < 100 ? 4 :
+                        currentRate < 300 ? 6 : 8;
 
-                    let maxStreams;
-
-                    if (currentRate < 50) {
-                        maxStreams = 2;
-                    } else if (currentRate < 100) {
-                        maxStreams = 3;
-                    } else if (currentRate < 150) {
-                        maxStreams = 4;
-                    } else if (currentRate < 200) {
-                        maxStreams = 6;
-                    } else {
-                        maxStreams = 10;
-                    }
-
-                    // Require the current rate to be reasonably stable
-                    // before adding another connection.
-                    const shouldIncrease =
-                        previousRate === 0 ||
-                        currentRate >=
-                            previousRate * 0.97;
-
-                    if (
-                        shouldIncrease &&
-                        connectionCount <
-                            maxStreams
-                    ) {
-                        workers.push(
-                            uploadLoop(
-                                connectionCount
-                            )
-                        );
-
+                    if (connectionCount < maxStreams &&
+                        (previousRate === 0 ||
+                         currentRate >= previousRate * 0.97)) {
+                        workers.push(uploadLoop(connectionCount));
                         connectionCount++;
                     }
 
-                    previousRate =
-                        currentRate;
-
+                    previousRate = currentRate;
                     lastDecision = now;
                 }
 
-                // --------------------------------------------------------
-                // UI update
-                // --------------------------------------------------------
-                if (
-                    now - lastUI >= 150
-                ) {
-                    const liveMbps =
-                        elapsed > 0
-                            ? totalUploaded * 8 /
-                              (elapsed * 1e6)
-                            : 0;
+                if (now - lastUI >= 150) {
+                    const liveMbps = elapsed > 0
+                        ? totalUploaded * 8 / (elapsed * 1e6) : 0;
 
                     updateProgress(
                         'Uploading...',
-                        60 + Math.min(
-                            35,
-                            elapsed / 14 * 35
-                        ),
+                        60 + Math.min(35, elapsed / 14 * 35),
                         `Uploading... ${liveMbps.toFixed(1)} Mbps • ${connectionCount} streams`
                     );
-
                     lastUI = now;
                 }
 
-                await new Promise(
-                    r => setTimeout(r, 30)
-                );
+                await new Promise(r => setTimeout(r, 40));
             }
 
-            // Stop all streams.
             running = false;
+            await Promise.allSettled(workers);
 
-            await Promise.allSettled(
-                workers
-            );
+            const duration = (performance.now() - measurementStart) / 1000;
 
-            const duration =
-                (performance.now() -
-                    measurementStart) /
-                1000;
+            if (totalUploaded <= 0)
+                throw new Error('No upload data was transferred');
 
-            if (
-                totalUploaded <= 0
-            ) {
-                throw new Error(
-                    'No upload data was transferred'
-                );
+            let stable = samples.slice();
+
+            if (stable.length >= 10) {
+                stable.sort((a, b) => a - b);
+                const trim = Math.floor(stable.length * 0.10);
+                stable = stable.slice(trim, stable.length - trim);
             }
 
-            // Final upload rate from total accepted bytes over the
-            // complete continuous measurement period.
+            const sampleAverage = stable.length
+                ? stable.reduce((a, b) => a + b, 0) / stable.length
+                : 0;
+
             const totalRate =
-                totalUploaded * 8 /
-                (duration * 1e6);
+                totalUploaded * 8 / (duration * 1e6);
 
             return {
-                speed: totalRate,
+                speed: sampleAverage > 0
+                    ? totalRate * 0.65 + sampleAverage * 0.35
+                    : totalRate,
                 bytes: totalUploaded,
-                connections: connectionCount,
-                samples: samples
+                connections: connectionCount
             };
         }
 
