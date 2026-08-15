@@ -862,7 +862,6 @@
                 
                 // Test Upload
                 statusEl.textContent = 'Testing upload speed...';
-                uploadNote.innerHTML = '⏳ Measuring upload with multiple connections...';
                 document.getElementById('uploadItem').classList.add('active');
                 setLoading('uploadSpeed', true);
                 const uploadResult = await measureUpload();
