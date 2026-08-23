@@ -3,7 +3,65 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Wifi Jach</title>
+    <title>Wifi Jach — Internet Speed Test</title>
+    <meta name="description" content="Wifi Jach is a free browser-based internet speed test for measuring download speed, upload speed, ping, and jitter.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://jhapali-inventions.github.io/wifi-speed/">
+    <link rel="sitemap" type="application/xml" href="https://jhapali-inventions.github.io/wifi-speed/sitemap.xml">
+    <link rel="alternate" type="text/plain" href="https://jhapali-inventions.github.io/wifi-speed/llms.txt" title="AI/agent information">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Wifi Jach — Internet Speed Test">
+    <meta property="og:description" content="Measure download speed, upload speed, ping, and jitter directly in your browser.">
+    <meta property="og:url" content="https://jhapali-inventions.github.io/wifi-speed/">
+    <meta property="og:image" content="https://jhapali-inventions.github.io/wifi-speed/og-image.svg">
+    <meta property="og:image:alt" content="Wifi Jach Internet Speed Test">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Wifi Jach",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Web Browser",
+      "description": "A free browser-based internet speed test for measuring download speed, upload speed, ping, and jitter.",
+      "url": "https://jhapali-inventions.github.io/wifi-speed/",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Download speed measurement",
+        "Upload speed measurement",
+        "Ping measurement",
+        "Jitter measurement"
+      ],
+      "publisher": {
+        "@type": "Organization",
+        "name": "Wifi Jach",
+        "url": "https://jhapali-inventions.github.io/wifi-speed/"
+      }
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Wifi Jach",
+      "url": "https://jhapali-inventions.github.io/wifi-speed/",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "url": "https://jhapali-inventions.github.io/wifi-speed/contact/"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "NP"
+      }
+    }
+    </script>
     <style>
 *{margin:0;padding:0;box-sizing:border-box} :root{--bg:linear-gradient(135deg,#24103f,#4b1f6f 55%,#170b2b);--text:#fff;--muted:rgba(255,255,255,.68);--item:rgba(255,255,255,.08);--border:rgba(255,255,255,.14)}
 body.dark-mode{--bg:linear-gradient(135deg,#050505,#0d0d0d 55%,#000);--muted:rgba(255,255,255,.62);--item:rgba(255,255,255,.055);--border:rgba(255,255,255,.11)}
@@ -16,6 +74,7 @@ h1{text-align:center;color:var(--text);margin-bottom:6px;font-size:clamp(2rem,5v
 .progress-container{width:100%;height:9px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden;margin:25px 0 12px}.progress-bar{height:100%;width:0;background:linear-gradient(90deg,#8b5cf6,#c084fc);border-radius:inherit;transition:width .3s}.test-details{display:flex;justify-content:space-between;margin:0 0 22px;font-size:.85rem;color:var(--muted)}
 .shimmer-button-wrap{display:flex;align-items:center;justify-content:center;width:100%;margin:4px 0 25px}#startTest{position:relative;isolation:isolate;overflow:hidden;width:min(100%,430px);min-height:58px;padding:0 28px;border:1px solid rgba(255,255,255,.12);border-radius:100px;background:#000;color:#fff;font-size:1.05rem;font-weight:600;cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,.28);transition:.25s}#startTest:before{content:"";position:absolute;z-index:-1;top:-120%;left:-45%;width:45%;height:340%;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.05) 35%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.05) 65%,transparent 100%);transform:rotate(18deg);animation:shimmer 3s linear infinite;pointer-events:none}#startTest:after{content:"";position:absolute;inset:1px;z-index:-1;border-radius:inherit;background:#000}#startTest span{position:relative;z-index:2}#startTest:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(0,0,0,.38)}#startTest:disabled{opacity:.65;cursor:not-allowed;transform:none}@keyframes shimmer{0%{left:-55%}100%{left:125%}}
 .status{text-align:center;margin-top:12px;color:var(--muted);font-size:.95rem;min-height:24px}.status.error{color:#f87171}.status.success{color:#34d399}.status.warning{color:#fbbf24}
+.agent-content{width:min(100%,900px);margin:28px auto 0;color:var(--muted);font-size:.9rem;line-height:1.65}.agent-content details{border:1px solid var(--border);border-radius:14px;background:var(--item);padding:12px 16px;backdrop-filter:blur(8px)}.agent-content summary{cursor:pointer;color:var(--text);font-weight:650}.agent-content-inner{padding:14px 2px 2px}.agent-content-inner p{margin:0 0 12px}.agent-content-inner strong{color:var(--text)}.agent-content-inner nav{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px}.agent-content-inner a{color:#a78bfa;text-decoration:none}.agent-content-inner a:hover{text-decoration:underline}
 .ip-card{width:min(100%,520px);margin:24px auto 0;padding:14px 18px;border:1px solid var(--border);border-radius:14px;background:var(--item);display:flex;align-items:center;justify-content:space-between;gap:15px;backdrop-filter:blur(8px)}.ip-card span{color:var(--muted);font-size:.85rem}.ip-card strong{color:#a78bfa;font-size:.95rem;font-weight:700;word-break:break-all;text-align:right}.info{margin-top:30px;padding-top:20px;border-top:1px solid var(--border);display:flex;justify-content:center;font-size:.85rem;color:var(--muted)}.info-item .value{color:#a78bfa;font-weight:600}.note{margin:15px auto 0;width:min(100%,700px);padding:12px;background:rgba(245,158,11,.12);border-radius:8px;font-size:.85rem;color:#fbbf24;border-left:4px solid #f59e0b}.success-note{background:rgba(16,185,129,.12);border-color:#10b981;color:#6ee7b7}
 @media(max-width:700px){.container{padding:68px 16px 30px}.speed-display{grid-template-columns:1fr}.speed-item{padding:24px 15px}.ip-card{flex-direction:column;align-items:flex-start}.ip-card strong{text-align:left}}@media(max-width:420px){.theme-toggle{top:14px;right:14px;width:40px;height:40px}h1{font-size:2rem}}
 </style>
@@ -73,6 +132,27 @@ h1{text-align:center;color:var(--text);margin-bottom:6px;font-size:clamp(2rem,5v
                 <span class="value" id="ispInfo">--</span>
             </span>
         </div>
+
+        <!-- Plain-HTML information for search engines and AI agents. The speed-test
+             application remains fully client-side; this section is deliberately
+             independent of JavaScript so crawlers can understand the product. -->
+        <section class="agent-content" aria-labelledby="about-wifi-jach">
+            <details>
+                <summary id="about-wifi-jach">About Wifi Jach</summary>
+                <div class="agent-content-inner">
+                    <p><strong>Wifi Jach</strong> is a free browser-based internet speed test for checking the current performance of an internet or Wi-Fi connection. It measures <strong>download speed</strong>, <strong>upload speed</strong>, <strong>ping</strong>, and <strong>jitter</strong>. A user opens this page in a modern browser, selects <strong>Start Test</strong>, and the application transfers test data through its configured network endpoints to estimate throughput.</p>
+                    <p>Use Wifi Jach when you want a quick network check, when troubleshooting slow internet, when comparing Wi-Fi conditions such as 2.4 GHz and 5 GHz, or when checking whether a connection is behaving consistently. Download and upload results are expressed in Mbps, while ping and jitter are expressed in milliseconds. Results can vary because of Wi-Fi interference, distance from the router, device hardware, browser behavior, network congestion, routing, and the location and capacity of the test endpoint.</p>
+                    <p>Wifi Jach is a measurement tool, not an ISP guarantee. A result from this page may differ from Ookla, Fast.com, or another speed-test service because different services can use different servers, routes, protocols, connection counts, and measurement algorithms. For a fair comparison, test from the same device, location, Wi-Fi band, and approximate time, and repeat the measurement when the network is otherwise idle.</p>
+                    <nav aria-label="Wifi Jach information">
+                        <a href="/wifi-speed/about/">About</a>
+                        <a href="/wifi-speed/contact/">Contact</a>
+                        <a href="/wifi-speed/privacy/">Privacy</a>
+                        <a href="/wifi-speed/sitemap.xml">Sitemap</a>
+                        <a href="/wifi-speed/llms.txt">Agent information</a>
+                    </nav>
+                </div>
+            </details>
+        </section>
     </div>
 
     <script>
