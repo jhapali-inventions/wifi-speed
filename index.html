@@ -9,9 +9,10 @@
     <link rel="canonical" href="https://jhapali-inventions.github.io/wifi-speed/">
     <link rel="sitemap" type="application/xml" href="https://jhapali-inventions.github.io/wifi-speed/sitemap.xml">
     <link rel="alternate" type="text/plain" href="https://jhapali-inventions.github.io/wifi-speed/llms.txt" title="AI/agent information">
-     <link rel="icon" type="image/png" sizes="512x512" href="1000198441_favicon_512.png">
-     <img class="page-logo" src="1000198441_favicon_512.png" alt="Wifi Test logo" width="96" height="96">
-    
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="512x512" href="1000198441_favicon_512.png">
+
     <meta property="og:type" content="website">
     <meta property="og:title" content="Wifi Test">
     <meta property="og:description" content="Measure download speed, upload speed, ping, and jitter directly in your browser.">
@@ -64,46 +65,472 @@
       }
     }
     </script>
+
     <style>
-*{margin:0;padding:0;box-sizing:border-box} :root{--bg:linear-gradient(135deg,#24103f,#4b1f6f 55%,#170b2b);--text:#fff;--muted:rgba(255,255,255,.68);--item:rgba(255,255,255,.08);--border:rgba(255,255,255,.14)}
-body.dark-mode{--bg:linear-gradient(135deg,#050505,#0d0d0d 55%,#000);--muted:rgba(255,255,255,.62);--item:rgba(255,255,255,.055);--border:rgba(255,255,255,.11)}
-html,body{min-height:100%}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0;transition:.35s}
-.theme-toggle{position:fixed;top:20px;right:22px;z-index:1000;width:44px;height:44px;margin:0;padding:0;border:1px solid rgba(255,255,255,.25);border-radius:50%;background:rgba(0,0,0,.35);color:#fff;font-size:1.15rem;cursor:pointer;backdrop-filter:blur(10px);transition:.2s}.theme-toggle:hover{transform:scale(1.06);background:rgba(0,0,0,.55)}
-.container{width:100%;max-width:none;min-height:100vh;padding:72px clamp(20px,5vw,80px) 45px;background:transparent;border-radius:0;box-shadow:none}
-h1{text-align:center;color:var(--text);margin-bottom:6px;font-size:clamp(2rem,5vw,3.4rem);font-weight:800;letter-spacing:-.04em}.subtitle{text-align:center;color:var(--muted);margin-bottom:42px;font-size:clamp(.9rem,2vw,1.05rem);font-weight:500}
-.speed-display{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(12px,2vw,24px);width:100%;margin-bottom:30px}.speed-item{text-align:center;padding:clamp(22px,4vw,38px) 15px;background:var(--item);border:1px solid var(--border);border-radius:18px;backdrop-filter:blur(8px);transition:.3s}.speed-item.active{background:rgba(139,92,246,.22);box-shadow:0 0 30px rgba(139,92,246,.16)}
-.speed-value{font-size:clamp(2.2rem,6vw,4rem);line-height:1;font-weight:800;color:#a78bfa;transition:.3s}.speed-value.measuring{animation:pulse .8s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}.speed-label{font-size:.9rem;color:var(--muted);margin-top:12px}.speed-unit{font-size:.65em;color:var(--muted)}
-.progress-container{width:100%;height:9px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden;margin:25px 0 12px}.progress-bar{height:100%;width:0;background:linear-gradient(90deg,#8b5cf6,#c084fc);border-radius:inherit;transition:width .3s}.test-details{display:flex;justify-content:space-between;margin:0 0 22px;font-size:.85rem;color:var(--muted)}
-.shimmer-button-wrap{display:flex;align-items:center;justify-content:center;width:100%;margin:4px 0 25px}#startTest{position:relative;isolation:isolate;overflow:hidden;width:min(100%,430px);min-height:58px;padding:0 28px;border:1px solid rgba(255,255,255,.12);border-radius:100px;background:#000;color:#fff;font-size:1.05rem;font-weight:600;cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,.28);transition:.25s}#startTest:before{content:"";position:absolute;z-index:-1;top:-120%;left:-45%;width:45%;height:340%;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.05) 35%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.05) 65%,transparent 100%);transform:rotate(18deg);animation:shimmer 3s linear infinite;pointer-events:none}#startTest:after{content:"";position:absolute;inset:1px;z-index:-1;border-radius:inherit;background:#000}#startTest span{position:relative;z-index:2}#startTest:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(0,0,0,.38)}#startTest:disabled{opacity:.65;cursor:not-allowed;transform:none}@keyframes shimmer{0%{left:-55%}100%{left:125%}}
-.status{text-align:center;margin-top:12px;color:var(--muted);font-size:.95rem;min-height:24px}.status.error{color:#f87171}.status.success{color:#34d399}.status.warning{color:#fbbf24}
-.page-logo{display:block;width:72px;height:72px;object-fit:contain;margin:0 auto 14px;border-radius:16px}.agent-content{width:min(100%,900px);margin:28px auto 0;color:var(--muted);font-size:.9rem;line-height:1.65}.agent-content details{border:1px solid var(--border);border-radius:14px;background:var(--item);padding:12px 16px;backdrop-filter:blur(8px)}.agent-content summary{cursor:pointer;color:var(--text);font-weight:650}.agent-content-inner{padding:14px 2px 2px}.agent-content-inner p{margin:0 0 12px}.agent-content-inner strong{color:var(--text)}.agent-content-inner nav{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px}.agent-content-inner a{color:#a78bfa;text-decoration:none}.agent-content-inner a:hover{text-decoration:underline}
-.ip-card{width:min(100%,520px);margin:24px auto 0;padding:14px 18px;border:1px solid var(--border);border-radius:14px;background:var(--item);display:flex;align-items:center;justify-content:space-between;gap:15px;backdrop-filter:blur(8px)}.ip-card span{color:var(--muted);font-size:.85rem}.ip-card strong{color:#a78bfa;font-size:.95rem;font-weight:700;word-break:break-all;text-align:right}.info{margin-top:30px;padding-top:20px;border-top:1px solid var(--border);display:flex;justify-content:center;font-size:.85rem;color:var(--muted)}.info-item .value{color:#a78bfa;font-weight:600}.note{margin:15px auto 0;width:min(100%,700px);padding:12px;background:rgba(245,158,11,.12);border-radius:8px;font-size:.85rem;color:#fbbf24;border-left:4px solid #f59e0b}.success-note{background:rgba(16,185,129,.12);border-color:#10b981;color:#6ee7b7}
-@media(max-width:700px){.container{padding:68px 16px 30px}.speed-display{grid-template-columns:1fr}.speed-item{padding:24px 15px}.ip-card{flex-direction:column;align-items:flex-start}.ip-card strong{text-align:left}}@media(max-width:420px){.theme-toggle{top:14px;right:14px;width:40px;height:40px}h1{font-size:2rem}}
-</style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+    --bg:linear-gradient(135deg,#24103f,#4b1f6f 55%,#170b2b);
+    --text:#fff;
+    --muted:rgba(255,255,255,.68);
+    --item:rgba(255,255,255,.08);
+    --border:rgba(255,255,255,.14)
+}
+
+body.dark-mode{
+    --bg:linear-gradient(135deg,#050505,#0d0d0d 55%,#000);
+    --muted:rgba(255,255,255,.62);
+    --item:rgba(255,255,255,.055);
+    --border:rgba(255,255,255,.11)
+}
+
+html,body{
+    min-height:100%
+}
+
+body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    padding:0;
+    transition:.35s
+}
+
+.theme-toggle{
+    position:fixed;
+    top:20px;
+    right:22px;
+    z-index:1000;
+    width:44px;
+    height:44px;
+    margin:0;
+    padding:0;
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:50%;
+    background:rgba(0,0,0,.35);
+    color:#fff;
+    font-size:1.15rem;
+    cursor:pointer;
+    backdrop-filter:blur(10px);
+    transition:.2s
+}
+
+.theme-toggle:hover{
+    transform:scale(1.06);
+    background:rgba(0,0,0,.55)
+}
+
+.container{
+    width:100%;
+    max-width:none;
+    min-height:100vh;
+    padding:72px clamp(20px,5vw,80px) 45px;
+    background:transparent;
+    border-radius:0;
+    box-shadow:none
+}
+
+h1{
+    text-align:center;
+    color:var(--text);
+    margin-bottom:6px;
+    font-size:clamp(2rem,5vw,3.4rem);
+    font-weight:800;
+    letter-spacing:-.04em
+}
+
+.subtitle{
+    text-align:center;
+    color:var(--muted);
+    margin-bottom:42px;
+    font-size:clamp(.9rem,2vw,1.05rem);
+    font-weight:500
+}
+
+.speed-display{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:clamp(12px,2vw,24px);
+    width:100%;
+    margin-bottom:30px
+}
+
+.speed-item{
+    text-align:center;
+    padding:clamp(22px,4vw,38px) 15px;
+    background:var(--item);
+    border:1px solid var(--border);
+    border-radius:18px;
+    backdrop-filter:blur(8px);
+    transition:.3s
+}
+
+.speed-item.active{
+    background:rgba(139,92,246,.22);
+    box-shadow:0 0 30px rgba(139,92,246,.16)
+}
+
+.speed-value{
+    font-size:clamp(2.2rem,6vw,4rem);
+    line-height:1;
+    font-weight:800;
+    color:#a78bfa;
+    transition:.3s
+}
+
+.speed-value.measuring{
+    animation:pulse .8s ease-in-out infinite
+}
+
+@keyframes pulse{
+    0%,100%{opacity:1}
+    50%{opacity:.5}
+}
+
+.speed-label{
+    font-size:.9rem;
+    color:var(--muted);
+    margin-top:12px
+}
+
+.speed-unit{
+    font-size:.65em;
+    color:var(--muted)
+}
+
+.progress-container{
+    width:100%;
+    height:9px;
+    background:rgba(255,255,255,.12);
+    border-radius:999px;
+    overflow:hidden;
+    margin:25px 0 12px
+}
+
+.progress-bar{
+    height:100%;
+    width:0;
+    background:linear-gradient(90deg,#8b5cf6,#c084fc);
+    border-radius:inherit;
+    transition:width .3s
+}
+
+.test-details{
+    display:flex;
+    justify-content:space-between;
+    margin:0 0 22px;
+    font-size:.85rem;
+    color:var(--muted)
+}
+
+.shimmer-button-wrap{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    margin:4px 0 25px
+}
+
+#startTest{
+    position:relative;
+    isolation:isolate;
+    overflow:hidden;
+    width:min(100%,430px);
+    min-height:58px;
+    padding:0 28px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:100px;
+    background:#000;
+    color:#fff;
+    font-size:1.05rem;
+    font-weight:600;
+    cursor:pointer;
+    box-shadow:0 12px 30px rgba(0,0,0,.28);
+    transition:.25s
+}
+
+#startTest:before{
+    content:"";
+    position:absolute;
+    z-index:-1;
+    top:-120%;
+    left:-45%;
+    width:45%;
+    height:340%;
+    background:linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255,255,255,.05) 35%,
+        rgba(255,255,255,.95) 50%,
+        rgba(255,255,255,.05) 65%,
+        transparent 100%
+    );
+    transform:rotate(18deg);
+    animation:shimmer 3s linear infinite;
+    pointer-events:none
+}
+
+#startTest:after{
+    content:"";
+    position:absolute;
+    inset:1px;
+    z-index:-1;
+    border-radius:inherit;
+    background:#000
+}
+
+#startTest span{
+    position:relative;
+    z-index:2
+}
+
+#startTest:hover{
+    transform:translateY(-2px);
+    box-shadow:0 16px 38px rgba(0,0,0,.38)
+}
+
+#startTest:disabled{
+    opacity:.65;
+    cursor:not-allowed;
+    transform:none
+}
+
+@keyframes shimmer{
+    0%{left:-55%}
+    100%{left:125%}
+}
+
+.status{
+    text-align:center;
+    margin-top:12px;
+    color:var(--muted);
+    font-size:.95rem;
+    min-height:24px
+}
+
+.status.error{
+    color:#f87171
+}
+
+.status.success{
+    color:#34d399
+}
+
+.status.warning{
+    color:#fbbf24
+}
+
+/* PAGE LOGO - USING 1000198441_favicon_512.png */
+.page-logo{
+    display:block;
+    width:72px;
+    height:72px;
+    object-fit:contain;
+    margin:0 auto 14px;
+    border-radius:16px
+}
+
+.agent-content{
+    width:min(100%,900px);
+    margin:28px auto 0;
+    color:var(--muted);
+    font-size:.9rem;
+    line-height:1.65
+}
+
+.agent-content details{
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:var(--item);
+    padding:12px 16px;
+    backdrop-filter:blur(8px)
+}
+
+.agent-content summary{
+    cursor:pointer;
+    color:var(--text);
+    font-weight:650
+}
+
+.agent-content-inner{
+    padding:14px 2px 2px
+}
+
+.agent-content-inner p{
+    margin:0 0 12px
+}
+
+.agent-content-inner strong{
+    color:var(--text)
+}
+
+.agent-content-inner nav{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 16px;
+    margin-top:10px
+}
+
+.agent-content-inner a{
+    color:#a78bfa;
+    text-decoration:none
+}
+
+.agent-content-inner a:hover{
+    text-decoration:underline
+}
+
+.ip-card{
+    width:min(100%,520px);
+    margin:24px auto 0;
+    padding:14px 18px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:var(--item);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+    backdrop-filter:blur(8px)
+}
+
+.ip-card span{
+    color:var(--muted);
+    font-size:.85rem
+}
+
+.ip-card strong{
+    color:#a78bfa;
+    font-size:.95rem;
+    font-weight:700;
+    word-break:break-all;
+    text-align:right
+}
+
+.info{
+    margin-top:30px;
+    padding-top:20px;
+    border-top:1px solid var(--border);
+    display:flex;
+    justify-content:center;
+    font-size:.85rem;
+    color:var(--muted)
+}
+
+.info-item .value{
+    color:#a78bfa;
+    font-weight:600
+}
+
+.note{
+    margin:15px auto 0;
+    width:min(100%,700px);
+    padding:12px;
+    background:rgba(245,158,11,.12);
+    border-radius:8px;
+    font-size:.85rem;
+    color:#fbbf24;
+    border-left:4px solid #f59e0b
+}
+
+.success-note{
+    background:rgba(16,185,129,.12);
+    border-color:#10b981;
+    color:#6ee7b7
+}
+
+@media(max-width:700px){
+    .container{
+        padding:68px 16px 30px
+    }
+
+    .speed-display{
+        grid-template-columns:1fr
+    }
+
+    .speed-item{
+        padding:24px 15px
+    }
+
+    .ip-card{
+        flex-direction:column;
+        align-items:flex-start
+    }
+
+    .ip-card strong{
+        text-align:left
+    }
+}
+
+@media(max-width:420px){
+    .theme-toggle{
+        top:14px;
+        right:14px;
+        width:40px;
+        height:40px
+    }
+
+    h1{
+        font-size:2rem
+    }
+}
+    </style>
 </head>
+
 <body>
-    <button id="themeToggle" class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Switch theme" title="Switch theme">
+
+    <button
+        id="themeToggle"
+        class="theme-toggle"
+        type="button"
+        onclick="toggleTheme()"
+        aria-label="Switch theme"
+        title="Switch theme"
+    >
         🌙
     </button>
 
     <div class="container">
-        <img class="page-logo" src="1000198441.png" alt="Wifi Test logo" width="72" height="72">
+
+        <!-- PAGE LOGO -->
+        <img
+            class="page-logo"
+            src="1000198441_favicon_512.png"
+            alt="Wifi Test logo"
+            width="72"
+            height="72"
+        >
+
         <h1>Wifi Test</h1>
-        <p class="subtitle" id="tagline">Trust WifiTest, Not your isp!!!!!!</p>
+
+        <p class="subtitle" id="tagline">
+            Trust WifiTest, Not your isp!!!!!!
+        </p>
 
         <div class="speed-display">
+
             <div class="speed-item" id="downloadItem">
                 <div class="speed-value" id="downloadSpeed">--</div>
-                <div class="speed-label">Download <span class="speed-unit">Mbps</span></div>
+                <div class="speed-label">
+                    Download <span class="speed-unit">Mbps</span>
+                </div>
             </div>
+
             <div class="speed-item" id="uploadItem">
                 <div class="speed-value" id="uploadSpeed">--</div>
-                <div class="speed-label">Upload <span class="speed-unit">Mbps</span></div>
+                <div class="speed-label">
+                    Upload <span class="speed-unit">Mbps</span>
+                </div>
             </div>
+
             <div class="speed-item" id="pingItem">
                 <div class="speed-value" id="ping">--</div>
-                <div class="speed-label">Ping <span class="speed-unit">ms</span></div>
+                <div class="speed-label">
+                    Ping <span class="speed-unit">ms</span>
+                </div>
             </div>
+
         </div>
 
         <div class="progress-container">
@@ -116,13 +543,26 @@ h1{text-align:center;color:var(--text);margin-bottom:6px;font-size:clamp(2rem,5v
         </div>
 
         <div class="shimmer-button-wrap">
-            <button id="startTest" onclick="startSpeedTest()" type="button">
+            <button
+                id="startTest"
+                onclick="startSpeedTest()"
+                type="button"
+            >
                 <span>Start Test</span>
             </button>
         </div>
 
-        <div class="status" id="status">Click "Start Test" to begin</div>
-        <div class="status" id="jitterInfo" style="font-size:0.8em;margin-top:4px;">Jitter: -- ms</div>
+        <div class="status" id="status">
+            Click "Start Test" to begin
+        </div>
+
+        <div
+            class="status"
+            id="jitterInfo"
+            style="font-size:0.8em;margin-top:4px;"
+        >
+            Jitter: -- ms
+        </div>
 
         <div class="ip-card">
             <span>Your IP Address</span>
@@ -136,91 +576,173 @@ h1{text-align:center;color:var(--text);margin-bottom:6px;font-size:clamp(2rem,5v
             </span>
         </div>
 
-        <!-- Plain-HTML information for search engines and AI agents. The speed-test
-             application remains fully client-side; this section is deliberately
-             independent of JavaScript so crawlers can understand the product. -->
-        <section class="agent-content" aria-labelledby="about-wifi-jach">
+        <!-- Plain-HTML information for search engines and AI agents -->
+        <section
+            class="agent-content"
+            aria-labelledby="about-wifi-jach"
+        >
             <details>
-                <summary id="about-wifi-jach">About Wifi Test</summary>
+
+                <summary id="about-wifi-jach">
+                    About Wifi Test
+                </summary>
+
                 <div class="agent-content-inner">
-                    <p><strong>Wifi Jach</strong> is a free browser-based internet speed test for checking the current performance of an internet or Wi-Fi connection. It measures <strong>download speed</strong>, <strong>upload speed</strong>, <strong>ping</strong>, and <strong>jitter</strong>. A user opens this page in a modern browser, selects <strong>Start Test</strong>, and the application transfers test data through its configured network endpoints to estimate throughput.</p>
-                    <p>Use Wifi Jach when you want a quick network check, when troubleshooting slow internet, when comparing Wi-Fi conditions such as 2.4 GHz and 5 GHz, or when checking whether a connection is behaving consistently. Download and upload results are expressed in Mbps, while ping and jitter are expressed in milliseconds. Results can vary because of Wi-Fi interference, distance from the router, device hardware, browser behavior, network congestion, routing, and the location and capacity of the test endpoint.</p>
-                    <p>Wifi Jach is a measurement tool, not an ISP guarantee. A result from this page may differ from Ookla, Fast.com, or another speed-test service because different services can use different servers, routes, protocols, connection counts, and measurement algorithms. For a fair comparison, test from the same device, location, Wi-Fi band, and approximate time, and repeat the measurement when the network is otherwise idle.</p>
+
+                    <p>
+                        <strong>Wifi Jach</strong> is a free browser-based
+                        internet speed test for checking the current
+                        performance of an internet or Wi-Fi connection.
+                        It measures <strong>download speed</strong>,
+                        <strong>upload speed</strong>,
+                        <strong>ping</strong>, and
+                        <strong>jitter</strong>.
+                        A user opens this page in a modern browser,
+                        selects <strong>Start Test</strong>, and the
+                        application transfers test data through its
+                        configured network endpoints to estimate throughput.
+                    </p>
+
+                    <p>
+                        Use Wifi Jach when you want a quick network check,
+                        when troubleshooting slow internet, when comparing
+                        Wi-Fi conditions such as 2.4 GHz and 5 GHz, or when
+                        checking whether a connection is behaving consistently.
+                        Download and upload results are expressed in Mbps,
+                        while ping and jitter are expressed in milliseconds.
+                        Results can vary because of Wi-Fi interference,
+                        distance from the router, device hardware,
+                        browser behavior, network congestion, routing,
+                        and the location and capacity of the test endpoint.
+                    </p>
+
+                    <p>
+                        Wifi Jach is a measurement tool, not an ISP guarantee.
+                        A result from this page may differ from Ookla,
+                        Fast.com, or another speed-test service because
+                        different services can use different servers,
+                        routes, protocols, connection counts, and measurement
+                        algorithms. For a fair comparison, test from the same
+                        device, location, Wi-Fi band, and approximate time,
+                        and repeat the measurement when the network is
+                        otherwise idle.
+                    </p>
+
                     <nav aria-label="Wifi Jach information">
                         <a href="/wifi-speed/about/">About</a>
                         <a href="/wifi-speed/contact/">Contact</a>
                         <a href="/wifi-speed/privacy/">Privacy</a>
                         <a href="/wifi-speed/sitemap.xml">Sitemap</a>
-                        <a href="/wifi-speed/llms.txt">Agent information</a>
+                        <a href="/wifi-speed/llms.txt">
+                            Agent information
+                        </a>
                     </nav>
+
                 </div>
             </details>
         </section>
+
     </div>
 
     <script>
+
         // ============================================================
         // SPEED TEST - WITH WORKING UPLOAD USING RELIABLE METHOD
         // ============================================================
-        
+
         let isTesting = false;
         let abortController = null;
 
-        // DOWNLOAD TEST - CLOUDFLARE SPEED TEST EDGE
-        // Uses Cloudflare's dedicated bandwidth endpoint instead of tiny
-        // JavaScript library files. Multiple streams help fast 4G/5G/Wi-Fi
-        // connections reach their available throughput.
-        const DOWNLOAD_ENDPOINT = 'https://speed-test.aayushadhikari609.workers.dev';
 
-        // Ping test endpoints
+        // ============================================================
+        // DOWNLOAD TEST - CLOUDFLARE SPEED TEST EDGE
+        // ============================================================
+
+        const DOWNLOAD_ENDPOINT =
+            'https://speed-test.aayushadhikari609.workers.dev';
+
+
+        // ============================================================
+        // PING TEST ENDPOINTS
+        // ============================================================
+
         const PING_URLS = [
             'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-            'https://unpkg.com/three@0.160.0/build/three.min.js',
+            'https://unpkg.com/three@0.160.0/build/three.min.js'
         ];
+
 
         // ============================================================
         // UTILITY FUNCTIONS
         // ============================================================
-        
+
         function updateProgress(phase, progress, statusText) {
+
             document.getElementById('testPhase').textContent = phase;
-            document.getElementById('testProgress').textContent = Math.round(progress) + '%';
-            document.getElementById('progressBar').style.width = Math.min(progress, 100) + '%';
-            if (statusText) document.getElementById('status').textContent = statusText;
+
+            document.getElementById('testProgress').textContent =
+                Math.round(progress) + '%';
+
+            document.getElementById('progressBar').style.width =
+                Math.min(progress, 100) + '%';
+
+            if (statusText) {
+                document.getElementById('status').textContent =
+                    statusText;
+            }
         }
 
+
         function setLoading(elementId, isLoading) {
+
             const el = document.getElementById(elementId);
-            if (isLoading) el.classList.add('measuring');
-            else el.classList.remove('measuring');
+
+            if (isLoading) {
+                el.classList.add('measuring');
+            } else {
+                el.classList.remove('measuring');
+            }
         }
+
 
         // ============================================================
         // MEASURE PING + JITTER
         // ============================================================
+
         async function measurePing() {
+
             const samples = [];
             const attempts = 12;
 
             for (let i = 0; i < attempts; i++) {
-                const url = PING_URLS[i % PING_URLS.length] +
+
+                const url =
+                    PING_URLS[i % PING_URLS.length] +
                     '?cache=' + Date.now() + Math.random();
 
                 const start = performance.now();
 
                 try {
+
                     await fetch(url, {
                         method: 'HEAD',
                         cache: 'no-store',
                         signal: abortController?.signal
                     });
 
-                    const latency = performance.now() - start;
-                    if (latency > 0 && latency < 2000)
+                    const latency =
+                        performance.now() - start;
+
+                    if (latency > 0 && latency < 2000) {
                         samples.push(latency);
+                    }
+
                 } catch (e) {
-                    if (e.name === 'AbortError') throw e;
+
+                    if (e.name === 'AbortError') {
+                        throw e;
+                    }
                 }
 
                 updateProgress(
@@ -232,25 +754,49 @@ h1{text-align:center;color:var(--text);margin-bottom:6px;font-size:clamp(2rem,5v
                 await new Promise(r => setTimeout(r, 45));
             }
 
-            if (!samples.length)
-                return { ping: 0, jitter: 0 };
+
+            if (!samples.length) {
+                return {
+                    ping: 0,
+                    jitter: 0
+                };
+            }
+
 
             samples.sort((a, b) => a - b);
 
-            const trim = samples.length >= 8 ? 2 : 1;
-            const stable = samples.slice(
-                trim,
-                Math.max(trim + 1, samples.length - trim)
-            );
 
-            const ping = stable[Math.floor(stable.length / 2)];
+            const trim =
+                samples.length >= 8 ? 2 : 1;
+
+
+            const stable =
+                samples.slice(
+                    trim,
+                    Math.max(trim + 1, samples.length - trim)
+                );
+
+
+            const ping =
+                stable[Math.floor(stable.length / 2)];
+
 
             let jitter = 0;
-            for (let i = 1; i < stable.length; i++)
-                jitter += Math.abs(stable[i] - stable[i - 1]);
 
-            if (stable.length > 1)
-                jitter /= stable.length - 1;
+            for (let i = 1; i < stable.length; i++) {
+
+                jitter += Math.abs(
+                    stable[i] - stable[i - 1]
+                );
+            }
+
+
+            if (stable.length > 1) {
+
+                jitter /=
+                    stable.length - 1;
+            }
+
 
             return {
                 ping: Math.round(ping * 10) / 10,
@@ -258,10 +804,13 @@ h1{text-align:center;color:var(--text);margin-bottom:6px;font-size:clamp(2rem,5v
             };
         }
 
+
         // ============================================================
         // CONTINUOUS ADAPTIVE DOWNLOAD TEST
         // ============================================================
+
         async function measureDownload() {
+
             const WARMUP = 500;
             const TEST_DURATION = 14000;
             const CHUNK_SIZE = 4 * 1024 * 1024;
@@ -269,24 +818,43 @@ h1{text-align:center;color:var(--text);margin-bottom:6px;font-size:clamp(2rem,5v
             let connectionCount = 2;
             let running = true;
             let totalBytes = 0;
+
             let lastUI = 0;
             let lastSample = performance.now();
             let lastSampleBytes = 0;
             let lastDecision = performance.now();
             let previousRate = 0;
+
             const samples = [];
             const workers = [];
 
+
             const start = performance.now();
-            const warmupEnd = start + WARMUP;
-            const stopTime = warmupEnd + TEST_DURATION;
+
+            const warmupEnd =
+                start + WARMUP;
+
+            const stopTime =
+                warmupEnd + TEST_DURATION;
+
 
             const stream = async (id) => {
-                while (running && performance.now() < stopTime) {
-                    if (abortController?.signal.aborted)
-                        throw new DOMException('Aborted', 'AbortError');
+
+                while (
+                    running &&
+                    performance.now() < stopTime
+                ) {
+
+                    if (abortController?.signal.aborted) {
+                        throw new DOMException(
+                            'Aborted',
+                            'AbortError'
+                        );
+                    }
+
 
                     try {
+
                         const response = await fetch(
                             `${DOWNLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&t=${Date.now()}-${id}-${Math.random()}`,
                             {
@@ -295,130 +863,291 @@ h1{text-align:center;color:var(--text);margin-bottom:6px;font-size:clamp(2rem,5v
                             }
                         );
 
-                        if (!response.ok || !response.body)
-                            throw new Error(`HTTP ${response.status}`);
 
-                        const reader = response.body.getReader();
+                        if (
+                            !response.ok ||
+                            !response.body
+                        ) {
+                            throw new Error(
+                                `HTTP ${response.status}`
+                            );
+                        }
+
+
+                        const reader =
+                            response.body.getReader();
+
 
                         while (true) {
-                            const {done, value} = await reader.read();
-                            if (done) break;
 
-                            const now = performance.now();
+                            const {
+                                done,
+                                value
+                            } = await reader.read();
+
+
+                            if (done) {
+                                break;
+                            }
+
+
+                            const now =
+                                performance.now();
+
 
                             if (now >= stopTime) {
+
                                 await reader.cancel();
+
                                 return;
                             }
 
-                            if (now >= warmupEnd)
-                                totalBytes += value.byteLength;
+
+                            if (now >= warmupEnd) {
+
+                                totalBytes +=
+                                    value.byteLength;
+                            }
                         }
+
+
                     } catch (e) {
-                        if (e.name === 'AbortError') throw e;
-                        await new Promise(r => setTimeout(r, 60));
+
+                        if (e.name === 'AbortError') {
+                            throw e;
+                        }
+
+                        await new Promise(
+                            r => setTimeout(r, 60)
+                        );
                     }
                 }
             };
 
-            workers.push(stream(0), stream(1));
 
-            while (performance.now() < warmupEnd)
-                await new Promise(r => setTimeout(r, 25));
+            workers.push(
+                stream(0),
+                stream(1)
+            );
 
-            const measurementStart = performance.now();
 
-            while (performance.now() < stopTime) {
-                const now = performance.now();
-                const elapsed = (now - measurementStart) / 1000;
-                const sampleElapsed = (now - lastSample) / 1000;
+            while (
+                performance.now() < warmupEnd
+            ) {
+
+                await new Promise(
+                    r => setTimeout(r, 25)
+                );
+            }
+
+
+            const measurementStart =
+                performance.now();
+
+
+            while (
+                performance.now() < stopTime
+            ) {
+
+                const now =
+                    performance.now();
+
+
+                const elapsed =
+                    (now - measurementStart) / 1000;
+
+
+                const sampleElapsed =
+                    (now - lastSample) / 1000;
+
 
                 if (sampleElapsed >= 0.5) {
-                    const sampleBytes = totalBytes - lastSampleBytes;
-                    const rate = sampleBytes * 8 / (sampleElapsed * 1e6);
 
-                    if (rate > 0) samples.push(rate);
+                    const sampleBytes =
+                        totalBytes - lastSampleBytes;
+
+
+                    const rate =
+                        sampleBytes * 8 /
+                        (sampleElapsed * 1e6);
+
+
+                    if (rate > 0) {
+                        samples.push(rate);
+                    }
+
 
                     lastSample = now;
                     lastSampleBytes = totalBytes;
                 }
 
-                if (now - lastDecision >= 1500 && elapsed >= 1.5 &&
-                    connectionCount < 10) {
-                    const recent = samples.slice(-3);
-                    const currentRate = recent.length
-                        ? recent.reduce((a, b) => a + b, 0) / recent.length
-                        : 0;
+
+                if (
+                    now - lastDecision >= 1500 &&
+                    elapsed >= 1.5 &&
+                    connectionCount < 10
+                ) {
+
+                    const recent =
+                        samples.slice(-3);
+
+
+                    const currentRate =
+                        recent.length
+                            ? recent.reduce(
+                                (a, b) => a + b,
+                                0
+                              ) / recent.length
+                            : 0;
+
 
                     const maxStreams =
                         currentRate < 50 ? 2 :
                         currentRate < 100 ? 4 :
-                        currentRate < 300 ? 6 : 8;
+                        currentRate < 300 ? 6 :
+                        8;
 
-                    if (connectionCount < maxStreams &&
-                        (previousRate === 0 ||
-                         currentRate >= previousRate * 0.97)) {
-                        workers.push(stream(connectionCount));
+
+                    if (
+                        connectionCount < maxStreams &&
+                        (
+                            previousRate === 0 ||
+                            currentRate >=
+                                previousRate * 0.97
+                        )
+                    ) {
+
+                        workers.push(
+                            stream(connectionCount)
+                        );
+
                         connectionCount++;
                     }
 
-                    previousRate = currentRate;
+
+                    previousRate =
+                        currentRate;
+
                     lastDecision = now;
                 }
 
+
                 if (now - lastUI >= 150) {
-                    const liveMbps = elapsed > 0
-                        ? totalBytes * 8 / (elapsed * 1e6) : 0;
+
+                    const liveMbps =
+                        elapsed > 0
+                            ? totalBytes * 8 /
+                              (elapsed * 1e6)
+                            : 0;
+
 
                     updateProgress(
                         'Downloading...',
-                        10 + Math.min(50, elapsed / 14 * 50),
+                        10 +
+                        Math.min(
+                            50,
+                            elapsed / 14 * 50
+                        ),
                         `Downloading... ${liveMbps.toFixed(1)} Mbps • ${connectionCount} streams`
                     );
+
+
                     lastUI = now;
                 }
 
-                await new Promise(r => setTimeout(r, 40));
+
+                await new Promise(
+                    r => setTimeout(r, 40)
+                );
             }
+
 
             running = false;
-            await Promise.allSettled(workers);
 
-            const duration = (performance.now() - measurementStart) / 1000;
+            await Promise.allSettled(
+                workers
+            );
 
-            if (totalBytes <= 0)
-                throw new Error('No download data was received');
 
-            let stable = samples.slice();
+            const duration =
+                (performance.now() -
+                    measurementStart) / 1000;
 
-            if (stable.length >= 10) {
-                stable.sort((a, b) => a - b);
-                const trim = Math.floor(stable.length * 0.10);
-                stable = stable.slice(trim, stable.length - trim);
+
+            if (totalBytes <= 0) {
+
+                throw new Error(
+                    'No download data was received'
+                );
             }
 
-            const sampleAverage = stable.length
-                ? stable.reduce((a, b) => a + b, 0) / stable.length
-                : 0;
 
-            const totalRate = totalBytes * 8 / (duration * 1e6);
+            let stable =
+                samples.slice();
+
+
+            if (stable.length >= 10) {
+
+                stable.sort(
+                    (a, b) => a - b
+                );
+
+
+                const trim =
+                    Math.floor(
+                        stable.length * 0.10
+                    );
+
+
+                stable =
+                    stable.slice(
+                        trim,
+                        stable.length - trim
+                    );
+            }
+
+
+            const sampleAverage =
+                stable.length
+                    ? stable.reduce(
+                        (a, b) => a + b,
+                        0
+                      ) / stable.length
+                    : 0;
+
+
+            const totalRate =
+                totalBytes * 8 /
+                (duration * 1e6);
+
 
             return {
-                speed: sampleAverage > 0
-                    ? totalRate * 0.65 + sampleAverage * 0.35
-                    : totalRate,
-                bytes: totalBytes,
-                connections: connectionCount
+
+                speed:
+                    sampleAverage > 0
+                        ? totalRate * 0.65 +
+                          sampleAverage * 0.35
+                        : totalRate,
+
+                bytes:
+                    totalBytes,
+
+                connections:
+                    connectionCount
             };
         }
+
 
         // ============================================================
         // CONTINUOUS ADAPTIVE UPLOAD TEST
         // ============================================================
+
         const UPLOAD_ENDPOINT =
             'https://uploadworker.aayushadhikari609.workers.dev';
 
+
         async function measureUpload() {
+
             const WARMUP = 500;
             const TEST_DURATION = 14000;
             const CHUNK_SIZE = 1024 * 1024;
@@ -435,323 +1164,909 @@ h1{text-align:center;color:var(--text);margin-bottom:6px;font-size:clamp(2rem,5v
             const samples = [];
             const workers = [];
 
-            function makePayload(size) {
-                const data = new Uint8Array(size);
 
-                for (let i = 0; i < size; i += 65536) {
-                    const end = Math.min(i + 65536, size);
-                    crypto.getRandomValues(data.subarray(i, end));
+            function makePayload(size) {
+
+                const data =
+                    new Uint8Array(size);
+
+
+                for (
+                    let i = 0;
+                    i < size;
+                    i += 65536
+                ) {
+
+                    const end =
+                        Math.min(
+                            i + 65536,
+                            size
+                        );
+
+
+                    crypto.getRandomValues(
+                        data.subarray(
+                            i,
+                            end
+                        )
+                    );
                 }
+
 
                 return data;
             }
 
-            const start = performance.now();
-            const warmupEnd = start + WARMUP;
-            const stopTime = warmupEnd + TEST_DURATION;
 
-            const uploadStream = async (id) => {
-                const payload = makePayload(CHUNK_SIZE);
+            const start =
+                performance.now();
 
-                while (running && performance.now() < stopTime) {
-                    if (abortController?.signal.aborted) {
-                        throw new DOMException('Aborted', 'AbortError');
-                    }
 
-                    try {
-                        const response = await fetch(
-                            `${UPLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&t=${Date.now()}-${id}-${Math.random()}`,
-                            {
-                                method: 'POST',
-                                body: payload,
-                                cache: 'no-store',
-                                headers: {
-                                    'Content-Type':
-                                        'application/octet-stream'
-                                },
-                                signal: abortController?.signal
-                            }
+            const warmupEnd =
+                start + WARMUP;
+
+
+            const stopTime =
+                warmupEnd +
+                TEST_DURATION;
+
+
+            const uploadStream =
+                async (id) => {
+
+                    const payload =
+                        makePayload(
+                            CHUNK_SIZE
                         );
 
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}`);
+
+                    while (
+                        running &&
+                        performance.now() < stopTime
+                    ) {
+
+                        if (
+                            abortController?.signal.aborted
+                        ) {
+
+                            throw new DOMException(
+                                'Aborted',
+                                'AbortError'
+                            );
                         }
 
-                        if (performance.now() >= warmupEnd) {
-                            totalUploaded += payload.byteLength;
+
+                        try {
+
+                            const response =
+                                await fetch(
+                                    `${UPLOAD_ENDPOINT}?bytes=${CHUNK_SIZE}&t=${Date.now()}-${id}-${Math.random()}`,
+                                    {
+                                        method:'POST',
+                                        body:payload,
+                                        cache:'no-store',
+                                        headers:{
+                                            'Content-Type':
+                                                'application/octet-stream'
+                                        },
+                                        signal:
+                                            abortController?.signal
+                                    }
+                                );
+
+
+                            if (!response.ok) {
+
+                                throw new Error(
+                                    `HTTP ${response.status}`
+                                );
+                            }
+
+
+                            if (
+                                performance.now() >=
+                                warmupEnd
+                            ) {
+
+                                totalUploaded +=
+                                    payload.byteLength;
+                            }
+
+
+                        } catch (e) {
+
+                            if (
+                                e.name ===
+                                'AbortError'
+                            ) {
+                                throw e;
+                            }
+
+
+                            await new Promise(
+                                r =>
+                                    setTimeout(
+                                        r,
+                                        25
+                                    )
+                            );
                         }
-                    } catch (e) {
-                        if (e.name === 'AbortError') throw e;
-                        await new Promise(r => setTimeout(r, 25));
                     }
-                }
-            };
+                };
 
-            workers.push(uploadStream(0), uploadStream(1));
 
-            while (performance.now() < warmupEnd) {
-                await new Promise(r => setTimeout(r, 20));
+            workers.push(
+                uploadStream(0),
+                uploadStream(1)
+            );
+
+
+            while (
+                performance.now() <
+                warmupEnd
+            ) {
+
+                await new Promise(
+                    r => setTimeout(r, 20)
+                );
             }
 
-            const measurementStart = performance.now();
 
-            while (performance.now() < stopTime) {
-                const now = performance.now();
-                const elapsed = (now - measurementStart) / 1000;
-                const sampleElapsed = (now - lastSample) / 1000;
+            const measurementStart =
+                performance.now();
 
-                if (sampleElapsed >= 0.5) {
+
+            while (
+                performance.now() <
+                stopTime
+            ) {
+
+                const now =
+                    performance.now();
+
+
+                const elapsed =
+                    (now -
+                        measurementStart) /
+                    1000;
+
+
+                const sampleElapsed =
+                    (now -
+                        lastSample) /
+                    1000;
+
+
+                if (
+                    sampleElapsed >= 0.5
+                ) {
+
                     const sampleBytes =
-                        totalUploaded - lastSampleBytes;
+                        totalUploaded -
+                        lastSampleBytes;
+
 
                     const rate =
                         sampleBytes * 8 /
                         (sampleElapsed * 1e6);
 
-                    if (rate > 0) samples.push(rate);
 
-                    lastSample = now;
-                    lastSampleBytes = totalUploaded;
+                    if (rate > 0) {
+                        samples.push(rate);
+                    }
+
+
+                    lastSample =
+                        now;
+
+                    lastSampleBytes =
+                        totalUploaded;
                 }
+
 
                 if (
                     now - lastDecision >= 1500 &&
                     elapsed >= 1.5 &&
                     connectionCount < 10
                 ) {
-                    const recent = samples.slice(-3);
 
-                    const currentRate = recent.length
-                        ? recent.reduce((a, b) => a + b, 0) /
-                          recent.length
-                        : 0;
+                    const recent =
+                        samples.slice(-3);
+
+
+                    const currentRate =
+                        recent.length
+                            ? recent.reduce(
+                                (a, b) => a + b,
+                                0
+                              ) /
+                              recent.length
+                            : 0;
+
 
                     let targetStreams;
 
-                    if (currentRate < 50) {
+
+                    if (
+                        currentRate < 50
+                    ) {
+
                         targetStreams = 2;
-                    } else if (currentRate < 100) {
+
+                    } else if (
+                        currentRate < 100
+                    ) {
+
                         targetStreams = 3;
-                    } else if (currentRate < 150) {
+
+                    } else if (
+                        currentRate < 150
+                    ) {
+
                         targetStreams = 4;
-                    } else if (currentRate < 200) {
+
+                    } else if (
+                        currentRate < 200
+                    ) {
+
                         targetStreams = 6;
+
                     } else {
+
                         targetStreams = 10;
                     }
 
-                    if (connectionCount < targetStreams) {
+
+                    if (
+                        connectionCount <
+                        targetStreams
+                    ) {
+
                         workers.push(
-                            uploadStream(connectionCount)
+                            uploadStream(
+                                connectionCount
+                            )
                         );
+
                         connectionCount++;
                     }
 
-                    lastDecision = now;
+
+                    lastDecision =
+                        now;
                 }
 
-                if (now - lastUI >= 150) {
-                    const liveMbps = elapsed > 0
-                        ? totalUploaded * 8 / (elapsed * 1e6)
-                        : 0;
+
+                if (
+                    now - lastUI >= 150
+                ) {
+
+                    const liveMbps =
+                        elapsed > 0
+                            ? totalUploaded * 8 /
+                              (elapsed * 1e6)
+                            : 0;
+
 
                     updateProgress(
                         'Uploading...',
-                        60 + Math.min(35, elapsed / 14 * 35),
+                        60 +
+                        Math.min(
+                            35,
+                            elapsed / 14 * 35
+                        ),
                         `Uploading... ${liveMbps.toFixed(1)} Mbps • ${connectionCount} streams`
                     );
 
-                    lastUI = now;
+
+                    lastUI =
+                        now;
                 }
 
-                await new Promise(r => setTimeout(r, 30));
+
+                await new Promise(
+                    r => setTimeout(r, 30)
+                );
             }
+
 
             running = false;
-            await Promise.allSettled(workers);
+
+
+            await Promise.allSettled(
+                workers
+            );
+
 
             const duration =
-                (performance.now() - measurementStart) / 1000;
+                (performance.now() -
+                    measurementStart) /
+                1000;
 
-            if (totalUploaded <= 0) {
-                throw new Error('No upload data was transferred');
+
+            if (
+                totalUploaded <= 0
+            ) {
+
+                throw new Error(
+                    'No upload data was transferred'
+                );
             }
 
+
             const totalRate =
-                totalUploaded * 8 / (duration * 1e6);
+                totalUploaded * 8 /
+                (duration * 1e6);
+
 
             return {
-                speed: totalRate,
-                bytes: totalUploaded,
-                connections: connectionCount,
+
+                speed:
+                    totalRate,
+
+                bytes:
+                    totalUploaded,
+
+                connections:
+                    connectionCount,
+
                 samples
             };
         }
 
+
         // ============================================================
         // DETECT ISP
         // ============================================================
+
         async function detectISP() {
+
             try {
-                const response = await fetch('https://ipapi.co/json/', {
-                    signal: abortController?.signal
-                });
-                const data = await response.json();
-                return data.org || data.isp || 'Unknown ISP';
+
+                const response =
+                    await fetch(
+                        'https://ipapi.co/json/',
+                        {
+                            signal:
+                                abortController?.signal
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                return (
+                    data.org ||
+                    data.isp ||
+                    'Unknown ISP'
+                );
+
+
             } catch {
+
                 return '--';
             }
         }
 
+
         // ============================================================
         // MAIN SPEED TEST
         // ============================================================
+
         async function startSpeedTest() {
+
             if (isTesting) return;
+
             isTesting = true;
-            
-            const button = document.getElementById('startTest');
-            const statusEl = document.getElementById('status');
-            
+
+
+            const button =
+                document.getElementById(
+                    'startTest'
+                );
+
+
+            const statusEl =
+                document.getElementById(
+                    'status'
+                );
+
+
             // Reset UI
-            document.getElementById('downloadSpeed').textContent = '--';
-            document.getElementById('uploadSpeed').textContent = '--';
-            document.getElementById('ping').textContent = '--';
-            document.getElementById('jitterInfo').textContent = 'Jitter: -- ms';
-            document.getElementById('progressBar').style.width = '0%';
-            document.getElementById('testPhase').textContent = 'Starting...';
-            document.getElementById('testProgress').textContent = '0%';
-            statusEl.className = 'status';
+
+            document.getElementById(
+                'downloadSpeed'
+            ).textContent = '--';
+
+
+            document.getElementById(
+                'uploadSpeed'
+            ).textContent = '--';
+
+
+            document.getElementById(
+                'ping'
+            ).textContent = '--';
+
+
+            document.getElementById(
+                'jitterInfo'
+            ).textContent =
+                'Jitter: -- ms';
+
+
+            document.getElementById(
+                'progressBar'
+            ).style.width = '0%';
+
+
+            document.getElementById(
+                'testPhase'
+            ).textContent =
+                'Starting...';
+
+
+            document.getElementById(
+                'testProgress'
+            ).textContent =
+                '0%';
+
+
+            statusEl.className =
+                'status';
+
+
             button.disabled = true;
-            button.textContent = 'Testing...';
-            statusEl.textContent = 'Initializing...';
-            
-            abortController = new AbortController();
-            
+
+
+            button.textContent =
+                'Testing...';
+
+
+            statusEl.textContent =
+                'Initializing...';
+
+
+            abortController =
+                new AbortController();
+
+
             try {
+
                 // Detect ISP
-                statusEl.textContent = 'Detecting ISP...';
-                const isp = await detectISP();
-                document.getElementById('ispInfo').textContent = isp;
-                
+
+                statusEl.textContent =
+                    'Detecting ISP...';
+
+
+                const isp =
+                    await detectISP();
+
+
+                document.getElementById(
+                    'ispInfo'
+                ).textContent =
+                    isp;
+
+
                 // Test Ping
-                statusEl.textContent = 'Measuring ping...';
-                setLoading('ping', true);
-                const pingResult = await measurePing();
-                document.getElementById('ping').textContent = pingResult.ping.toFixed(1);
-                document.getElementById('jitterInfo').textContent = `Jitter: ${pingResult.jitter.toFixed(1)} ms`;
-                setLoading('ping', false);
-                
-                const pingEl = document.getElementById('ping');
-                pingEl.style.color = pingResult.ping < 50 ? '#10b981' : 
-                                     pingResult.ping < 100 ? '#f59e0b' : '#ef4444';
-                
+
+                statusEl.textContent =
+                    'Measuring ping...';
+
+
+                setLoading(
+                    'ping',
+                    true
+                );
+
+
+                const pingResult =
+                    await measurePing();
+
+
+                document.getElementById(
+                    'ping'
+                ).textContent =
+                    pingResult.ping.toFixed(1);
+
+
+                document.getElementById(
+                    'jitterInfo'
+                ).textContent =
+                    `Jitter: ${pingResult.jitter.toFixed(1)} ms`;
+
+
+                setLoading(
+                    'ping',
+                    false
+                );
+
+
+                const pingEl =
+                    document.getElementById(
+                        'ping'
+                    );
+
+
+                pingEl.style.color =
+                    pingResult.ping < 50
+                        ? '#10b981'
+                        : pingResult.ping < 100
+                            ? '#f59e0b'
+                            : '#ef4444';
+
+
                 // Test Download
-                statusEl.textContent = 'Testing download speed...';
-                document.getElementById('downloadItem').classList.add('active');
-                setLoading('downloadSpeed', true);
-                const downloadResult = await measureDownload();
-                document.getElementById('downloadSpeed').textContent = downloadResult.speed.toFixed(1);
-                setLoading('downloadSpeed', false);
-                document.getElementById('downloadItem').classList.remove('active');
-                
-                const downloadEl = document.getElementById('downloadSpeed');
-                downloadEl.style.color = downloadResult.speed > 50 ? '#10b981' : 
-                                        downloadResult.speed > 20 ? '#f59e0b' : '#ef4444';
-                
+
+                statusEl.textContent =
+                    'Testing download speed...';
+
+
+                document.getElementById(
+                    'downloadItem'
+                ).classList.add(
+                    'active'
+                );
+
+
+                setLoading(
+                    'downloadSpeed',
+                    true
+                );
+
+
+                const downloadResult =
+                    await measureDownload();
+
+
+                document.getElementById(
+                    'downloadSpeed'
+                ).textContent =
+                    downloadResult.speed.toFixed(1);
+
+
+                setLoading(
+                    'downloadSpeed',
+                    false
+                );
+
+
+                document.getElementById(
+                    'downloadItem'
+                ).classList.remove(
+                    'active'
+                );
+
+
+                const downloadEl =
+                    document.getElementById(
+                        'downloadSpeed'
+                    );
+
+
+                downloadEl.style.color =
+                    downloadResult.speed > 50
+                        ? '#10b981'
+                        : downloadResult.speed > 20
+                            ? '#f59e0b'
+                            : '#ef4444';
+
+
                 // Test Upload
-                statusEl.textContent = 'Testing upload speed...';
-                document.getElementById('uploadItem').classList.add('active');
-                setLoading('uploadSpeed', true);
-                const uploadResult = await measureUpload();
-                document.getElementById('uploadSpeed').textContent = uploadResult.speed.toFixed(1);
-                setLoading('uploadSpeed', false);
-                document.getElementById('uploadItem').classList.remove('active');
-                
-                const uploadEl = document.getElementById('uploadSpeed');
-                uploadEl.style.color = uploadResult.speed > 20 ? '#10b981' : 
-                                      uploadResult.speed > 5 ? '#f59e0b' : '#ef4444';
-                
+
+                statusEl.textContent =
+                    'Testing upload speed...';
+
+
+                document.getElementById(
+                    'uploadItem'
+                ).classList.add(
+                    'active'
+                );
+
+
+                setLoading(
+                    'uploadSpeed',
+                    true
+                );
+
+
+                const uploadResult =
+                    await measureUpload();
+
+
+                document.getElementById(
+                    'uploadSpeed'
+                ).textContent =
+                    uploadResult.speed.toFixed(1);
+
+
+                setLoading(
+                    'uploadSpeed',
+                    false
+                );
+
+
+                document.getElementById(
+                    'uploadItem'
+                ).classList.remove(
+                    'active'
+                );
+
+
+                const uploadEl =
+                    document.getElementById(
+                        'uploadSpeed'
+                    );
+
+
+                uploadEl.style.color =
+                    uploadResult.speed > 20
+                        ? '#10b981'
+                        : uploadResult.speed > 5
+                            ? '#f59e0b'
+                            : '#ef4444';
+
+
                 // Complete
-                updateProgress('Completed', 100, 'Completed');
-                statusEl.className = 'status success';
-                document.getElementById('tagline').textContent = 'Trust Wifijach , Not your isp!!!!!!';
+
+                updateProgress(
+                    'Completed',
+                    100,
+                    'Completed'
+                );
+
+
+                statusEl.className =
+                    'status success';
+
+
+                document.getElementById(
+                    'tagline'
+                ).textContent =
+                    'Trust Wifijach , Not your isp!!!!!!';
+
+
             } catch (error) {
-                if (error.name === 'AbortError') {
-                    statusEl.textContent = '⏹️ Test cancelled';
+
+                if (
+                    error.name ===
+                    'AbortError'
+                ) {
+
+                    statusEl.textContent =
+                        '⏹️ Test cancelled';
+
                 } else {
-                    statusEl.textContent = '❌ Test failed: ' + error.message;
-                    statusEl.className = 'status error';
+
+                    statusEl.textContent =
+                        '❌ Test failed: ' +
+                        error.message;
+
+                    statusEl.className =
+                        'status error';
                 }
-                console.error('Speed test error:', error);
+
+
+                console.error(
+                    'Speed test error:',
+                    error
+                );
+
+
             } finally {
-                button.disabled = false;
-                button.textContent = 'Test Again';
-                isTesting = false;
-                abortController = null;
-                document.getElementById('downloadItem').classList.remove('active');
-                document.getElementById('uploadItem').classList.remove('active');
-                setLoading('downloadSpeed', false);
-                setLoading('uploadSpeed', false);
-                setLoading('ping', false);
+
+                button.disabled =
+                    false;
+
+
+                button.textContent =
+                    'Test Again';
+
+
+                isTesting =
+                    false;
+
+
+                abortController =
+                    null;
+
+
+                document.getElementById(
+                    'downloadItem'
+                ).classList.remove(
+                    'active'
+                );
+
+
+                document.getElementById(
+                    'uploadItem'
+                ).classList.remove(
+                    'active'
+                );
+
+
+                setLoading(
+                    'downloadSpeed',
+                    false
+                );
+
+
+                setLoading(
+                    'uploadSpeed',
+                    false
+                );
+
+
+                setLoading(
+                    'ping',
+                    false
+                );
             }
         }
 
-        // Cancel test on page hide
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && isTesting && abortController) {
-                abortController.abort();
-            }
-        });
 
+        // ============================================================
+        // CANCEL TEST ON PAGE HIDE
+        // ============================================================
+
+        document.addEventListener(
+            'visibilitychange',
+            () => {
+
+                if (
+                    document.hidden &&
+                    isTesting &&
+                    abortController
+                ) {
+
+                    abortController.abort();
+                }
+            }
+        );
+
+
+        // ============================================================
+        // GET IP
+        // ============================================================
 
         async function getIP() {
+
             try {
-                const response = await fetch("https://api.ipify.org?format=json");
-                const data = await response.json();
-                document.getElementById("ip").textContent = data.ip;
+
+                const response =
+                    await fetch(
+                        "https://api.ipify.org?format=json"
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                document.getElementById(
+                    "ip"
+                ).textContent =
+                    data.ip;
+
+
             } catch (error) {
-                document.getElementById("ip").textContent = "Unable to detect";
+
+                document.getElementById(
+                    "ip"
+                ).textContent =
+                    "Unable to detect";
             }
         }
+
 
         // ============================================================
         // LIGHT / DARK THEME
         // ============================================================
-        function applyTheme(theme) {
-            const isDark = theme === 'dark';
-            document.body.classList.toggle('dark-mode', isDark);
 
-            const toggle = document.getElementById('themeToggle');
+        function applyTheme(theme) {
+
+            const isDark =
+                theme === 'dark';
+
+
+            document.body.classList.toggle(
+                'dark-mode',
+                isDark
+            );
+
+
+            const toggle =
+                document.getElementById(
+                    'themeToggle'
+                );
+
+
             if (toggle) {
-                toggle.textContent = isDark ? '☀️' : '🌙';
-                toggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+
+                toggle.textContent =
+                    isDark
+                        ? '☀️'
+                        : '🌙';
+
+
+                toggle.setAttribute(
+                    'aria-label',
+                    isDark
+                        ? 'Switch to light mode'
+                        : 'Switch to dark mode'
+                );
             }
 
-            localStorage.setItem('speedTestTheme', theme);
+
+            localStorage.setItem(
+                'speedTestTheme',
+                theme
+            );
         }
+
 
         function toggleTheme() {
-            const nextTheme = document.body.classList.contains('dark-mode')
-                ? 'light'
-                : 'dark';
-            applyTheme(nextTheme);
+
+            const nextTheme =
+                document.body.classList.contains(
+                    'dark-mode'
+                )
+                    ? 'light'
+                    : 'dark';
+
+
+            applyTheme(
+                nextTheme
+            );
         }
+
 
         function initializeTheme() {
-            const savedTheme = localStorage.getItem('speedTestTheme');
-            const prefersDark = window.matchMedia &&
-                window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-            applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+            const savedTheme =
+                localStorage.getItem(
+                    'speedTestTheme'
+                );
+
+
+            const prefersDark =
+                window.matchMedia &&
+                window.matchMedia(
+                    '(prefers-color-scheme: dark)'
+                ).matches;
+
+
+            applyTheme(
+                savedTheme ||
+                (
+                    prefersDark
+                        ? 'dark'
+                        : 'light'
+                )
+            );
         }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeTheme();
-            getIP();
-            // Test starts when the user clicks "Start Test".
-        });
+
+        // ============================================================
+        // INITIALIZE
+        // ============================================================
+
+        document.addEventListener(
+            'DOMContentLoaded',
+            () => {
+
+                initializeTheme();
+
+                getIP();
+
+                // Test starts when the user clicks "Start Test".
+            }
+        );
+
     </script>
+
 </body>
 </html>
