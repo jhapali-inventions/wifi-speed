@@ -448,6 +448,49 @@ h1{
     font-weight:600
 }
 
+.server-info{
+    margin:12px auto 0;
+    text-align:center;
+    color:var(--muted);
+    font-size:.82rem;
+    line-height:1.5
+}
+
+.result-actions{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    margin:18px auto 0
+}
+
+#saveResult{
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:999px;
+    padding:11px 24px;
+    background:rgba(255,255,255,.1);
+    color:var(--text);
+    font:inherit;
+    font-weight:650;
+    cursor:pointer;
+    transition:.2s
+}
+
+#saveResult:hover{
+    background:rgba(255,255,255,.18);
+    transform:translateY(-1px)
+}
+
+#saveResult[hidden]{
+    display:none
+}
+
+.result-timestamp{
+    color:var(--muted);
+    font-size:.78rem;
+    text-align:center
+}
+
 .note{
     margin:15px auto 0;
     width:min(100%,700px);
@@ -530,7 +573,7 @@ h1{
         <h1>Wifi Test</h1>
 
         <p class="subtitle" id="tagline">
-            Trust WifiTest, Not your isp!!!!!!
+            Reliable insights into your internet connection.
         </p>
 
         <div class="speed-display">
@@ -596,9 +639,20 @@ h1{
 
         <div class="info">
             <span class="info-item">
-                <span class="label">ISP:</span>
+                <span class="label">Detected ISP:</span>
                 <span class="value" id="ispInfo">--</span>
             </span>
+        </div>
+
+        <p class="server-info">
+            Test server: Cloudflare Worker endpoint · Exact edge location is not exposed by the endpoint.
+        </p>
+
+        <div class="result-actions">
+            <button id="saveResult" type="button" onclick="saveTestResult()" hidden>
+                Save Result
+            </button>
+            <span class="result-timestamp" id="resultTimestamp" aria-live="polite"></span>
         </div>
 
         <!-- Plain-HTML information for search engines and AI agents -->
@@ -677,6 +731,7 @@ h1{
 
         let isTesting = false;
         let abortController = null;
+        let latestTestResult = null;
 
 
         // ============================================================
@@ -1598,7 +1653,11 @@ h1{
                 );
 
 
-            // Reset UI
+            // Reset UI and previous saved-result state
+
+            latestTestResult = null;
+            document.getElementById('saveResult').hidden = true;
+            document.getElementById('resultTimestamp').textContent = '';
 
             document.getElementById(
                 'downloadSpeed'
@@ -1851,7 +1910,24 @@ h1{
                 document.getElementById(
                     'tagline'
                 ).textContent =
-                    'Trust Wifijach , Not your isp!!!!!!';
+                    'Reliable insights into your internet connection.';
+
+                // Store a timestamped, downloadable copy of the completed test.
+                const completedAt = new Date();
+                latestTestResult = {
+                    date: completedAt.toLocaleString(),
+                    ip: document.getElementById('ip').textContent,
+                    isp: document.getElementById('ispInfo').textContent,
+                    download: downloadResult.speed.toFixed(1) + ' Mbps',
+                    upload: uploadResult.speed.toFixed(1) + ' Mbps',
+                    ping: pingResult.ping.toFixed(1) + ' ms',
+                    jitter: pingResult.jitter.toFixed(1) + ' ms',
+                    testServer: 'Cloudflare Worker endpoint (exact edge location not exposed)'
+                };
+
+                document.getElementById('resultTimestamp').textContent =
+                    'Completed: ' + latestTestResult.date;
+                document.getElementById('saveResult').hidden = false;
 
 
             } catch (error) {
@@ -1930,6 +2006,49 @@ h1{
                     false
                 );
             }
+        }
+
+
+        // ============================================================
+        // SAVE COMPLETED TEST RESULT
+        // ============================================================
+
+        function saveTestResult() {
+            if (!latestTestResult) return;
+
+            const report = [
+                'WIFI TEST - CONNECTION REPORT',
+                '================================',
+                '',
+                'Date and time: ' + latestTestResult.date,
+                'IP address: ' + latestTestResult.ip,
+                'Detected ISP: ' + latestTestResult.isp,
+                '',
+                'DOWNLOAD: ' + latestTestResult.download,
+                'UPLOAD: ' + latestTestResult.upload,
+                'PING: ' + latestTestResult.ping,
+                'JITTER: ' + latestTestResult.jitter,
+                '',
+                'Test server: ' + latestTestResult.testServer,
+                '',
+                'Note: Results are browser-based measurements and may vary with',
+                'device, Wi-Fi conditions, network congestion, routing and server load.',
+                'This report is a record of the displayed test results, not an ISP-certified document.'
+            ].join('\\n');
+
+            const blob = new Blob([report], {
+                type: 'text/plain;charset=utf-8'
+            });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const safeDate = new Date().toISOString().replace(/[:.]/g, '-');
+
+            link.href = url;
+            link.download = 'wifi-test-result-' + safeDate + '.txt';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
         }
 
 
