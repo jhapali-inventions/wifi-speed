@@ -657,7 +657,7 @@ h1{
 
         <div class="result-actions">
             <button id="saveResult" type="button" onclick="saveTestResult()" hidden>
-                Save Result
+                Export CSV Report
             </button>
             <span class="result-timestamp" id="resultTimestamp" aria-live="polite"></span>
         </div>
@@ -801,8 +801,11 @@ h1{
 
             const samples = [];
             const attempts = 12;
+            let packetsSent = 0;
+            let packetsReceived = 0;
 
             for (let i = 0; i < attempts; i++) {
+                packetsSent++;
 
                 const url =
                     PING_URLS[i % PING_URLS.length] +
@@ -812,11 +815,13 @@ h1{
 
                 try {
 
-                    await fetch(url, {
+                    const response = await fetch(url, {
                         method: 'HEAD',
                         cache: 'no-store',
                         signal: abortController?.signal
                     });
+
+                    if (response.ok) packetsReceived++;
 
                     const latency =
                         performance.now() - start;
@@ -845,7 +850,11 @@ h1{
             if (!samples.length) {
                 return {
                     ping: 0,
-                    jitter: 0
+                    jitter: 0,
+                    packetsSent,
+                    packetsReceived,
+                    packetsLost: packetsSent - packetsReceived,
+                    packetLoss: packetsSent ? ((packetsSent - packetsReceived) / packetsSent) * 100 : 0
                 };
             }
 
@@ -887,7 +896,11 @@ h1{
 
             return {
                 ping: Math.round(ping * 10) / 10,
-                jitter: Math.round(jitter * 10) / 10
+                jitter: Math.round(jitter * 10) / 10,
+                packetsSent,
+                packetsReceived,
+                packetsLost: packetsSent - packetsReceived,
+                packetLoss: packetsSent ? ((packetsSent - packetsReceived) / packetsSent) * 100 : 0
             };
         }
 
@@ -1956,14 +1969,23 @@ h1{
                 // Store a timestamped, downloadable copy of the completed test.
                 const completedAt = new Date();
                 latestTestResult = {
+                    timestamp: completedAt.toISOString(),
                     date: completedAt.toLocaleString(),
                     ip: document.getElementById('ip').textContent,
                     isp: document.getElementById('ispInfo').textContent,
-                    download: downloadResult.speed.toFixed(1) + ' Mbps',
-                    upload: uploadResult.speed.toFixed(1) + ' Mbps',
-                    ping: pingResult.ping.toFixed(1) + ' ms',
-                    jitter: pingResult.jitter.toFixed(1) + ' ms',
-                    testServer: 'Cloudflare Worker endpoint (exact edge location not exposed)'
+                    location: document.getElementById('location').textContent,
+                    downloadMbps: Number(downloadResult.speed.toFixed(2)),
+                    uploadMbps: Number(uploadResult.speed.toFixed(2)),
+                    pingMs: Number(pingResult.ping.toFixed(1)),
+                    jitterMs: Number(pingResult.jitter.toFixed(1)),
+                    packetsSent: pingResult.packetsSent,
+                    packetsReceived: pingResult.packetsReceived,
+                    packetsLost: pingResult.packetsLost,
+                    packetLossPercent: Number(pingResult.packetLoss.toFixed(2)),
+                    downloadServer: DOWNLOAD_ENDPOINT,
+                    uploadServer: UPLOAD_ENDPOINT,
+                    pingServers: PING_URLS.join(' | '),
+                    serverNote: 'Cloudflare Worker endpoint; exact edge location is not exposed'
                 };
 
                 document.getElementById('resultTimestamp').textContent =
@@ -2057,39 +2079,46 @@ h1{
         function saveTestResult() {
             if (!latestTestResult) return;
 
-            const report = [
-                'WIFI TEST - CONNECTION REPORT',
-                '================================',
-                '',
-                'Date and time: ' + latestTestResult.date,
-                'IP address: ' + latestTestResult.ip,
-                'Detected ISP: ' + latestTestResult.isp,
-                '',
-                'DOWNLOAD: ' + latestTestResult.download,
-                'UPLOAD: ' + latestTestResult.upload,
-                'PING: ' + latestTestResult.ping,
-                'JITTER: ' + latestTestResult.jitter,
-                '',
-                'Test server: ' + latestTestResult.testServer,
-                '',
-                'Note: Results are browser-based measurements and may vary with',
-                'device, Wi-Fi conditions, network congestion, routing and server load.',
-                'This report is a record of the displayed test results, not an ISP-certified document.'
-            ].join('\\n');
+            const r = latestTestResult;
+            const rows = [
+                ['Report', 'WiFi Test Connection Report'],
+                ['Timestamp (ISO 8601)', r.timestamp],
+                ['Local date and time', r.date],
+                ['IP address', r.ip],
+                ['ISP', r.isp],
+                ['Approximate location', r.location],
+                ['Download speed (Mbps)', r.downloadMbps],
+                ['Upload speed (Mbps)', r.uploadMbps],
+                ['Ping (ms)', r.pingMs],
+                ['Jitter (ms)', r.jitterMs],
+                ['Ping probes sent', r.packetsSent],
+                ['Ping probes received', r.packetsReceived],
+                ['Ping probes lost', r.packetsLost],
+                ['Probe loss estimate (%)', r.packetLossPercent],
+                ['Download server', r.downloadServer],
+                ['Upload server', r.uploadServer],
+                ['Ping servers', r.pingServers],
+                ['Server details', r.serverNote],
+                ['Measurement note', 'Packet loss is estimated from 12 browser HTTP HEAD probes. It is not a network-layer ICMP packet-loss test. Results may vary with device, Wi-Fi conditions, congestion, routing and server load.']
+            ];
 
-            const blob = new Blob([report], {
-                type: 'text/plain;charset=utf-8'
-            });
+            const escapeCSV = value => {
+                const text = String(value ?? '');
+                return '"' + text.replace(/"/g, '""') + '"';
+            };
+
+            const csv = '\uFEFF' + rows.map(row => row.map(escapeCSV).join(',')).join('\r\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            const safeDate = new Date().toISOString().replace(/[:.]/g, '-');
+            const safeDate = r.timestamp.replace(/[:.]/g, '-');
 
             link.href = url;
-            link.download = 'wifi-test-result-' + safeDate + '.txt';
+            link.download = 'wifi-test-report-' + safeDate + '.csv';
             document.body.appendChild(link);
             link.click();
             link.remove();
-            URL.revokeObjectURL(url);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
 
 
